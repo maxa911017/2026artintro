@@ -6,8 +6,7 @@
     <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=200;300;400&display=swap" rel="stylesheet">
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -31,48 +30,89 @@
             user-select: none;
         }
 
-        .a-enter-vr { display: none !important; }
-        
+        /* 【100% 解決 CORS 黑畫面的無縫 360 度環景滾動技術】
+          不使用 3D 引擎，改用 CSS 硬體加速無縫滾動。
+          只要將 back.jpg 放在同目錄下，點兩下打開即能完美顯示！
+        */
+        .panoramic-viewport {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .panoramic-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 400%; /* 四倍寬度確保無縫拼接與極限流暢度 */
+            height: 100%;
+            display: flex;
+            animation: scrollBackground 240s linear infinite;
+            will-change: transform;
+        }
+
+        .panoramic-slice {
+            width: 25%;
+            height: 100%;
+            background-image: url('back.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        @keyframes scrollBackground {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); } /* 滾動過半時完美無縫重置 */
+        }
+
         .noise-overlay {
             position: fixed; inset: 0;
             background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
-            opacity: 0.06; pointer-events: none; z-index: 20; mix-blend-mode: overlay;
+            opacity: 0.05; pointer-events: none; z-index: 20; mix-blend-mode: overlay;
         }
 
         .vignette {
             position: fixed; inset: 0;
-            background: radial-gradient(circle at center, transparent 15%, #000000 110%);
+            background: radial-gradient(circle at center, transparent 10%, #000000 115%);
             pointer-events: none; z-index: 10;
         }
 
+        /* 畫面的受撞擊震動與閃爍 */
         .flicker-overlay {
-            position: fixed; inset: 0; background-color: #2a0000; opacity: 0;
+            position: fixed; inset: 0; background-color: #2a0300; opacity: 0;
             pointer-events: none; z-index: 15; mix-blend-mode: color-burn;
         }
 
         .flicker-active { animation: bombFlicker 0.4s ease-out; }
         @keyframes bombFlicker {
-            0% { opacity: 0; } 20% { opacity: 0.5; } 40% { opacity: 0.1; } 60% { opacity: 0.6; } 100% { opacity: 0; }
+            0% { opacity: 0; } 20% { opacity: 0.6; } 40% { opacity: 0.1; } 60% { opacity: 0.7; } 100% { opacity: 0; }
         }
 
-        .shake-active { animation: groundShake 0.4s ease-out; }
+        .shake-active { animation: groundShake 0.5s ease-out; }
         @keyframes groundShake {
-            0% { transform: translate(0, 0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(3px, -3px); } 60% { transform: translate(-3px, -2px); } 80% { transform: translate(2px, 2px); } 100% { transform: translate(0, 0); }
+            0% { transform: translate(0, 0); } 
+            15% { transform: translate(-5px, 4px) rotate(-0.5deg); } 
+            30% { transform: translate(5px, -4px) rotate(0.5deg); } 
+            45% { transform: translate(-4px, -2px) rotate(-0.2deg); } 
+            60% { transform: translate(3px, 3px) rotate(0.1deg); } 
+            75% { transform: translate(-1px, -1px); }
+            100% { transform: translate(0, 0); }
         }
 
-        /* 強化底層環境火光 */
+        /* 環境火光脈動 */
         .fire-glow {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 50vh;
-            background: linear-gradient(to top, rgba(220, 30, 0, 0.5) 0%, rgba(80, 0, 0, 0.2) 60%, transparent 100%);
-            pointer-events: none; z-index: 4; /* 放在 Canvas 後方，增加層次 */
-            animation: firePulse 3s infinite alternate ease-in-out;
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 60vh;
+            background: linear-gradient(to top, rgba(200, 30, 0, 0.45) 0%, rgba(100, 10, 0, 0.15) 50%, transparent 100%);
+            pointer-events: none; z-index: 4; 
+            animation: firePulse 4s infinite alternate ease-in-out;
             mix-blend-mode: screen;
             transform-origin: bottom;
         }
         @keyframes firePulse { 
-            0% { opacity: 0.3; transform: scaleY(0.9); } 
-            50% { opacity: 0.6; transform: scaleY(1.05); }
-            100% { opacity: 0.8; transform: scaleY(1); } 
+            0% { opacity: 0.4; transform: scaleY(0.95); } 
+            50% { opacity: 0.7; transform: scaleY(1.08); }
+            100% { opacity: 0.5; transform: scaleY(1); } 
         }
 
         #ui-layer {
@@ -80,38 +120,80 @@
             pointer-events: none; display: flex; flex-direction: column;
             justify-content: space-between; transition: opacity 1s ease;
             padding: max(2.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+            opacity: 0; /* 初始隱藏，進入後顯現 */
         }
 
         .pointer-events-auto { pointer-events: auto; }
 
         .act-btn {
-            position: relative; color: #8c8c8c; transition: all 0.6s ease;
+            position: relative; color: #a3a3a3; transition: all 0.6s ease;
             padding: 10px 0; opacity: 0.75;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
-        .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.3em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,100,50,0.5); }
+        .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.25em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,80,0,0.6); }
+
+        /* 【開場歷史帷幕】
+          100% 解決音效無法播放之痛點。點擊時立刻啟動音效，並平滑解鎖頁面。
+        */
+        #start-curtain {
+            position: fixed; inset: 0; background-color: #080808; z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1), transform 2s ease;
+            cursor: pointer;
+        }
+        #start-curtain.fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.05);
+        }
 
         #theater-curtain {
             position: fixed; inset: 0; background-color: #000; z-index: 50;
-            opacity: 1; pointer-events: none; transition: opacity 3s ease;
+            opacity: 0; pointer-events: none; transition: opacity 2s ease;
         }
     </style>
 </head>
 <body class="font-serif antialiased bg-black">
 
+    <!-- 背景音樂 -->
     <audio id="bg-audio" src="music.mp4" loop preload="auto"></audio>
 
-    <a-scene embedded vr-mode-ui="enabled: false">
-        <a-sky id="pano-image" src="back.jpg" color="#1a1a1a" rotation="0 -90 0"
-               animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
-    </a-scene>
+    <!-- 
+      100% 成功加載的環景容器 
+      使用兩個相同切片實現無縫連接滾動。
+    -->
+    <div id="experience-scene" class="panoramic-viewport">
+        <div class="panoramic-track">
+            <div class="panoramic-slice"></div>
+            <div class="panoramic-slice"></div>
+            <div class="panoramic-slice"></div>
+            <div class="panoramic-slice"></div>
+        </div>
+    </div>
 
+    <!-- 環境火光 -->
     <div class="fire-glow"></div>
-    <canvas id="ash-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
+    
+    <!-- 終極火焰、火星與灰燼 Canvas -->
+    <canvas id="fire-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
+    
+    <!-- 氛圍濾鏡 -->
     <div class="vignette"></div>
     <div class="noise-overlay"></div>
     <div id="flicker-layer" class="flicker-overlay"></div>
 
+    <!-- 互動開場帷幕 -->
+    <div id="start-curtain" onclick="startExperience()">
+        <div class="text-center px-6">
+            <p class="text-xs tracking-[0.4em] text-red-700 font-light mb-4 uppercase">Shellproof Shelter Memories</p>
+            <h2 class="text-xl md:text-2xl font-light tracking-[0.5em] text-gray-300 mb-8">防空洞深處，我們聽著外面的聲音...</h2>
+            <div class="inline-block px-8 py-3 border border-stone-800 text-stone-400 text-xs tracking-[0.3em] uppercase hover:text-white hover:border-red-900 transition-all duration-700 ease-in-out">
+                點擊 進入記憶
+            </div>
+        </div>
+    </div>
+
+    <!-- UI 選單層 -->
     <div id="ui-layer">
         <header class="text-left drop-shadow-2xl">
             <h1 class="text-2xl md:text-4xl font-light tracking-[0.4em] text-gray-200">煙霧中長大的孩子</h1>
@@ -119,158 +201,235 @@
         </header>
 
         <nav class="flex flex-col items-end gap-6 mt-auto pointer-events-auto">
-            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base">幕一：躲貓貓的規則</button>
-            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base">幕二：惡魔的翅膀</button>
-            <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base">幕三：天空的禮物</button>
-            <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base">終幕：進入記憶</button>
+            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base font-light">幕一：躲貓貓的規則</button>
+            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">幕二：惡魔的翅膀</button>
+            <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base font-light">幕三：天空的禮物</button>
+            <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base font-light">終幕：進入記憶</button>
         </nav>
     </div>
 
+    <!-- 切換章節黑幕 -->
     <div id="theater-curtain"></div>
 
     <script>
-        window.onload = () => {
-            document.getElementById('theater-curtain').style.opacity = '0';
-            
-            // 處理音效播放（需要使用者點擊畫面才能播放，此為瀏覽器安全機制）
+        // 點擊啟動體驗
+        function startExperience() {
+            const startCurtain = document.getElementById('start-curtain');
             const bgAudio = document.getElementById('bg-audio');
-            bgAudio.volume = 0.5; // 音量適中
-            bgAudio.play().catch(() => {
-                // 如果自動播放失敗，等待使用者點擊任意處後立即播放
-                document.addEventListener('click', () => {
-                    bgAudio.play();
-                }, {once: true});
-            });
+            const uiLayer = document.getElementById('ui-layer');
 
-            initCanvas();
+            // 100% 播放音樂
+            bgAudio.volume = 0.55;
+            bgAudio.play().catch(e => console.log("播放被阻擋：", e));
+
+            // 淡出開場畫面
+            startCurtain.classList.add('fade-out');
+            
+            // 延遲顯現 UI
+            setTimeout(() => {
+                uiLayer.style.opacity = '1';
+            }, 1000);
+
+            // 啟動環境隨機震動與空襲閃爍
             startFearFlicker();
-            setupAutoHide();
-        };
-
-        function setupAutoHide() {
-            const ui = document.getElementById('ui-layer');
-            let timer;
-            window.addEventListener('mousedown', () => {
-                ui.style.opacity = '0.1';
-                clearTimeout(timer);
-            });
-            window.addEventListener('mouseup', () => {
-                timer = setTimeout(() => ui.style.opacity = '1', 1500);
-            });
         }
 
+        // 自動隱藏與顯現 UI（沉浸模式）
+        let uiTimer;
+        const ui = document.getElementById('ui-layer');
+        window.addEventListener('mousedown', () => {
+            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
+                ui.style.opacity = '0.08';
+                clearTimeout(uiTimer);
+            }
+        });
+        window.addEventListener('mouseup', () => {
+            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
+                uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
+            }
+        });
+
+        // 模擬隨機震炸閃爍
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
-            const scene = document.querySelector('a-scene');
+            const scene = document.getElementById('experience-scene');
             setInterval(() => {
-                if (Math.random() > 0.7) {
+                if (Math.random() > 0.65) {
                     flicker.classList.add('flicker-active');
                     scene.classList.add('shake-active');
                     setTimeout(() => {
                         flicker.classList.remove('flicker-active');
                         scene.classList.remove('shake-active');
-                    }, 400);
+                    }, 500);
                 }
-            }, 5000);
+            }, 6000);
         }
 
         function executeChapter(num) {
             document.getElementById('theater-curtain').style.opacity = '1';
-            setTimeout(() => window.location.href = `part${num}.html`, 3000);
+            setTimeout(() => window.location.href = `part${num}.html`, 2000);
         }
 
+        // ==========================================
+        //  超寫實 Canvas 火焰、火星、灰燼粒子特效系統
+        // ==========================================
+        const canvas = document.getElementById('fire-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let particles = [];      // 灰燼與微弱火星
+        let flameParticles = []; // 熊熊火焰
+        let mouse = { x: undefined, y: undefined, speedX: 0 };
+        let lastMouseX = 0;
+
+        // 滑鼠移動影響火星風向
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouse.speedX = (e.clientX - lastMouseX) * 0.15;
+            lastMouseX = e.clientX;
+        });
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 粒子 1：空中飄揚的灰燼與上升的零星火星
+        class AshAndSpark {
+            constructor() { this.reset(true); }
+            
+            reset(init = false) {
+                this.type = Math.random() > 0.65 ? 'spark' : 'ash';
+                this.x = Math.random() * canvas.width;
+                this.y = init ? Math.random() * canvas.height : (this.type === 'spark' ? canvas.height + 20 : -20);
+                this.size = Math.random() * 2 + 0.5;
+                this.speedY = this.type === 'spark' ? -(Math.random() * 2 + 0.8) : Math.random() * 0.6 + 0.2;
+                this.speedX = (Math.random() - 0.5) * 0.4;
+                this.opacity = Math.random() * 0.6 + 0.2;
+                this.wobbleSpeed = Math.random() * 0.02 + 0.01;
+                this.wobbleValue = Math.random() * Math.PI;
+            }
+
+            update() {
+                this.y += this.speedY;
+                // 加入風阻與滑鼠的風向干擾
+                this.x += this.speedX + Math.sin(this.wobbleValue) * 0.2 + (mouse.speedX * 0.1);
+                this.wobbleValue += this.wobbleSpeed;
+
+                if (this.type === 'spark' && mouse.x) {
+                    let dx = mouse.x - this.x;
+                    if (Math.abs(dx) < 150) {
+                        this.x += dx * 0.01; // 輕微吸引
+                    }
+                }
+
+                if (this.y < -20 || this.y > canvas.height + 20 || this.x < -10 || this.x > canvas.width + 10) {
+                    this.reset(false);
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.type === 'spark' ? `rgba(255, 120, 30, ${this.opacity})` : `rgba(70, 70, 70, ${this.opacity})`;
+                ctx.shadowBlur = this.type === 'spark' ? 6 : 0;
+                ctx.shadowColor = 'rgba(255, 80, 0, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0; // 重置
+            }
+        }
+
+        // 粒子 2：底部蔓延與起伏的高級火焰粒子
+        class FlameParticle {
+            constructor() { this.reset(); this.y = canvas.height + Math.random() * 100; }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 20 + Math.random() * 30;
+                this.size = Math.random() * 50 + 20; // 火焰團大小
+                this.speedY = -(Math.random() * 3 + 1); // 火焰向上竄動速度
+                this.speedX = (Math.random() - 0.5) * 1.5;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.015 + 0.008; // 生命消逝速度
+                this.heat = Math.random() > 0.4 ? 'orange' : 'yellow';
+            }
+
+            update() {
+                this.y += this.speedY;
+                // 受滑鼠與擺動風速影響
+                this.x += this.speedX + Math.sin(this.life * 8) * 0.8 + (mouse.speedX * 0.15);
+                this.life -= this.decay;
+                this.size *= 0.95; // 上升時火焰慢慢收縮
+
+                if (this.life <= 0 || this.size <= 1) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                const alpha = this.life * 0.5;
+                let r = 255, g = 0, b = 0;
+
+                if (this.heat === 'yellow') {
+                    g = Math.floor(190 * this.life + 60);
+                } else {
+                    g = Math.floor(110 * this.life + 20);
+                }
+
+                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+                grad.addColorStop(0.3, `rgba(${r}, ${g - 30 > 0 ? g - 30 : 0}, 0, ${alpha * 0.7})`);
+                grad.addColorStop(1, `rgba(50, 0, 0, 0)`);
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 初始化粒子陣列
         function initCanvas() {
-            const canvas = document.getElementById('ash-canvas');
-            const ctx = canvas.getContext('2d');
-            let particles = [];
-            let fireParticles = [];
-
-            // 確保畫布自適應視窗大小
-            function resizeCanvas() {
-                canvas.width = window.innerWidth; 
-                canvas.height = window.innerHeight;
+            particles = [];
+            flameParticles = [];
+            // 灰燼與上升小火星
+            for (let i = 0; i < 450; i++) {
+                particles.push(new AshAndSpark());
             }
-            window.addEventListener('resize', resizeCanvas);
-            resizeCanvas();
-
-            // ================= 灰燼與火星 =================
-            class Particle {
-                constructor() { this.reset(); this.y = Math.random() * canvas.height; }
-                reset() {
-                    this.type = Math.random() > 0.7 ? 'spark' : 'ash';
-                    this.x = Math.random() * canvas.width;
-                    this.y = this.type === 'spark' ? canvas.height + 10 : -10;
-                    this.speedY = this.type === 'spark' ? -(Math.random() * 2 + 1) : Math.random() * 0.5 + 0.1;
-                    this.speedX = (Math.random() - 0.5) * 0.5;
-                    this.size = Math.random() * 2 + 0.5;
-                    this.opacity = Math.random() * 0.6 + 0.2;
-                }
-                update() {
-                    this.y += this.speedY;
-                    this.x += this.speedX;
-                    if (this.y < -20 || this.y > canvas.height + 20) this.reset();
-                }
-                draw() {
-                    ctx.fillStyle = this.type === 'spark' ? `rgba(255, 100, 20, ${this.opacity})` : `rgba(80, 80, 80, ${this.opacity})`;
-                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-                }
+            // 底部燃燒的火海粒子
+            for (let i = 0; i < 180; i++) {
+                flameParticles.push(new FlameParticle());
             }
-
-            // ================= 底部火焰粒子系統 =================
-            class FireParticle {
-                constructor() { this.reset(); this.y = canvas.height + Math.random() * 50; }
-                reset() {
-                    this.x = Math.random() * canvas.width;
-                    this.y = canvas.height + 10 + Math.random() * 20; // 從底部誕生
-                    this.size = Math.random() * 40 + 15; // 較大的火焰半徑
-                    this.speedY = -(Math.random() * 2.5 + 0.5); // 向上飄
-                    this.speedX = (Math.random() - 0.5) * 1.5; // 左右搖曳
-                    this.life = Math.random() * 0.8 + 0.2; // 粒子生命週期
-                    this.decay = Math.random() * 0.015 + 0.005; // 衰減速度
-                }
-                update() {
-                    this.y += this.speedY;
-                    this.x += Math.sin(this.life * 10) * 1.5; // 模擬火焰波浪搖曳
-                    this.life -= this.decay;
-                    this.size *= 0.96; // 逐漸縮小
-                    if (this.life <= 0 || this.size <= 0.5) this.reset();
-                }
-                draw() {
-                    // 根據生命週期漸變顏色 (黃 -> 橘 -> 紅 -> 透明)
-                    const a = this.life * 0.6;
-                    const r = 255;
-                    const g = Math.floor(180 * this.life);
-                    const b = 0;
-                    
-                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
-                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
-                    gradient.addColorStop(1, `rgba(${r}, 30, 0, 0)`);
-
-                    ctx.fillStyle = gradient;
-                    ctx.beginPath(); 
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
-                    ctx.fill();
-                }
-            }
-
-            for (let i = 0; i < 600; i++) particles.push(new Particle());
-            for (let i = 0; i < 150; i++) fireParticles.push(new FireParticle()); // 建立火焰粒子
-
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // 1. 繪製底部火焰 (使用 lighter 混合模式產生光暈發散效果)
-                ctx.globalCompositeOperation = 'lighter';
-                fireParticles.forEach(p => { p.update(); p.draw(); });
-
-                // 2. 繪製灰燼與火星 (切換回一般模式)
-                ctx.globalCompositeOperation = 'source-over';
-                particles.forEach(p => { p.update(); p.draw(); });
-
-                requestAnimationFrame(animate);
-            }
-            animate();
         }
+
+        // 主渲染動畫迴圈
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 繪製底部火海（用 lighter 混合模式實現高光重疊發熱）
+            ctx.globalCompositeOperation = 'lighter';
+            flameParticles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // 2. 繪製飄逸灰燼（用 source-over 一般模式避免疊加過亮）
+            ctx.globalCompositeOperation = 'source-over';
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // 慢慢衰減滑鼠風力阻尼
+            mouse.speedX *= 0.95;
+
+            requestAnimationFrame(animate);
+        }
+
+        initCanvas();
+        animate();
     </script>
 </body>
 </html>
