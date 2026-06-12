@@ -6,7 +6,9 @@
     <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=200;300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
+    <!-- 載入正統 360 度環景引擎 A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -30,38 +32,7 @@
             user-select: none;
         }
 
-        /* 【互動無縫 360 度環景視窗】
-          改由 JavaScript 物理引擎接管，支援滑鼠與手機觸控拖曳
-        */
-        .panoramic-viewport {
-            position: absolute;
-            inset: 0;
-            overflow: hidden;
-            z-index: 1;
-            cursor: grab;
-        }
-        .panoramic-viewport:active {
-            cursor: grabbing;
-        }
-
-        .panoramic-track {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 400%; /* 四倍寬度確保無縫拼接 */
-            height: 100%;
-            display: flex;
-            will-change: transform;
-        }
-
-        .panoramic-slice {
-            width: 25%;
-            height: 100%;
-            background-image: url('back.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
+        .a-enter-vr { display: none !important; }
 
         .noise-overlay {
             position: fixed; inset: 0;
@@ -75,7 +46,6 @@
             pointer-events: none; z-index: 10;
         }
 
-        /* 畫面的受撞擊震動與閃爍 */
         .flicker-overlay {
             position: fixed; inset: 0; background-color: #2a0300; opacity: 0;
             pointer-events: none; z-index: 15; mix-blend-mode: color-burn;
@@ -97,7 +67,6 @@
             100% { transform: translate(0, 0); }
         }
 
-        /* 環境火光脈動 */
         .fire-glow {
             position: fixed; bottom: 0; left: 0; width: 100%; height: 60vh;
             background: linear-gradient(to top, rgba(200, 30, 0, 0.45) 0%, rgba(100, 10, 0, 0.15) 50%, transparent 100%);
@@ -117,7 +86,7 @@
             pointer-events: none; display: flex; flex-direction: column;
             justify-content: space-between; transition: opacity 1s ease;
             padding: max(2.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
-            opacity: 0; /* 初始隱藏，進入後顯現 */
+            opacity: 0; 
         }
 
         .pointer-events-auto { pointer-events: auto; }
@@ -129,7 +98,6 @@
         }
         .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.25em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,80,0,0.6); }
 
-        /* 開場歷史帷幕 */
         #start-curtain {
             position: fixed; inset: 0; background-color: #080808; z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -150,25 +118,32 @@
 </head>
 <body class="font-serif antialiased bg-black">
 
-    <!-- 背景音樂 -->
-    <audio id="bg-audio" src="music.mp3" loop preload="auto"></audio>
-
-    <!-- 
-      100% 成功加載的環景容器（支援手動拖曳）
-    -->
-    <div id="experience-scene" class="panoramic-viewport">
-        <div class="panoramic-track">
-            <div class="panoramic-slice"></div>
-            <div class="panoramic-slice"></div>
-            <div class="panoramic-slice"></div>
-            <div class="panoramic-slice"></div>
-        </div>
+    <!-- 本機直接開啟的黑畫面警告 -->
+    <div id="local-warning" class="hidden fixed top-0 left-0 w-full bg-red-700 text-white text-xs md:text-sm text-center py-3 px-4 z-[999] shadow-lg">
+        ⚠️ <b>注意：</b>您目前直接雙擊開啟了檔案。瀏覽器安全機制會阻擋 360 度圖片載入（導致黑畫面）。<br>
+        請使用 <b>VS Code</b> 的 <b>Live Server</b> 擴充功能開啟此網頁，即可正常顯示！
     </div>
+
+    <!-- 背景音樂 -->
+    <audio id="bg-audio" src="music.mp4" loop preload="auto"></audio>
+
+    <!-- 真正的 3D 360度環景引擎 -->
+    <a-scene id="experience-scene" embedded vr-mode-ui="enabled: false">
+        <a-assets>
+            <img id="panorama" src="back.jpg" crossorigin="anonymous">
+        </a-assets>
+        
+        <!-- 360度天空，支援滑鼠拖曳、手機滑動觀看上下左右 -->
+        <a-sky src="#panorama" rotation="0 -90 0" 
+               animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
+               
+        <a-entity camera look-controls="reverseMouseDrag: true"></a-entity>
+    </a-scene>
 
     <!-- 環境火光 -->
     <div class="fire-glow"></div>
     
-    <!-- 終極火焰、火星與灰燼 Canvas -->
+    <!-- 動態火焰、火星與灰燼 Canvas (不會阻擋 360 度滑鼠拖曳) -->
     <canvas id="fire-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
     
     <!-- 氛圍濾鏡 -->
@@ -176,7 +151,7 @@
     <div class="noise-overlay"></div>
     <div id="flicker-layer" class="flicker-overlay"></div>
 
-    <!-- 互動開場帷幕 -->
+    <!-- 互動開場帷幕 (確保音樂能 100% 播放) -->
     <div id="start-curtain" onclick="startExperience()">
         <div class="text-center px-6">
             <p class="text-xs tracking-[0.4em] text-red-700 font-light mb-4 uppercase">Shellproof Shelter Memories</p>
@@ -206,85 +181,11 @@
     <div id="theater-curtain"></div>
 
     <script>
-        // ==========================================
-        //  360度互動拖曳與物理慣性系統
-        // ==========================================
-        const track = document.querySelector('.panoramic-track');
-        const sceneContainer = document.getElementById('experience-scene');
-        
-        let isDragging = false;
-        let startX = 0;
-        let startOffset = 0;
-        let offsetPx = 0;            // 當前滾動的像素位置
-        let velocity = 0;            // 當前滑動速度（用於物理慣性）
-        let lastX = 0;
-        const autoScrollSpeed = -0.3; // 自動旋轉的微弱速度（向左慢速滾動）
-
-        // 取得單張環景切片的寬度（等於一個視窗寬度）
-        function getMaxScroll() {
-            return window.innerWidth;
+        // 偵測是否直接雙擊打開本地檔案 (file://)
+        if (window.location.protocol === 'file:') {
+            document.getElementById('local-warning').classList.remove('hidden');
         }
 
-        // 限制與無縫重設滾動位置
-        function wrapOffset() {
-            const maxScroll = getMaxScroll();
-            if (offsetPx < -maxScroll) {
-                offsetPx += maxScroll;
-                startOffset += maxScroll;
-            }
-            if (offsetPx > 0) {
-                offsetPx -= maxScroll;
-                startOffset -= maxScroll;
-            }
-        }
-
-        function handleStart(clientX) {
-            // 如果還沒點擊開場帷幕，禁止拖曳
-            if (!document.getElementById('start-curtain').classList.contains('fade-out')) return;
-            isDragging = true;
-            startX = clientX;
-            lastX = clientX;
-            startOffset = offsetPx;
-            velocity = 0;
-        }
-
-        function handleMove(clientX) {
-            if (!isDragging) return;
-            const dx = clientX - startX;
-            offsetPx = startOffset + dx;
-            
-            // 計算並累積滑動速度（用於釋放後的慣性）
-            velocity = clientX - lastX;
-            lastX = clientX;
-
-            // 連帶影響火焰特效的風向
-            mouse.speedX = velocity * 0.4;
-
-            wrapOffset();
-        }
-
-        function handleEnd() {
-            isDragging = false;
-        }
-
-        // 監聽電腦滑鼠拖曳
-        sceneContainer.addEventListener('mousedown', (e) => handleStart(e.clientX));
-        window.addEventListener('mousemove', (e) => handleMove(e.clientX));
-        window.addEventListener('mouseup', handleEnd);
-
-        // 監聽手機與平板觸控
-        sceneContainer.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) handleStart(e.touches[0].clientX);
-        });
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0) handleMove(e.touches[0].clientX);
-        });
-        window.addEventListener('touchend', handleEnd);
-
-
-        // ==========================================
-        //  主要流程控制
-        // ==========================================
         function startExperience() {
             const startCurtain = document.getElementById('start-curtain');
             const bgAudio = document.getElementById('bg-audio');
@@ -321,9 +222,22 @@
             }
         });
 
+        // 手機觸控時也隱藏 UI
+        window.addEventListener('touchstart', () => {
+            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
+                ui.style.opacity = '0.08';
+                clearTimeout(uiTimer);
+            }
+        });
+        window.addEventListener('touchend', () => {
+            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
+                uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
+            }
+        });
+
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
-            const scene = document.getElementById('experience-scene');
+            const scene = document.querySelector('a-scene');
             setInterval(() => {
                 if (Math.random() > 0.65) {
                     flicker.classList.add('flicker-active');
@@ -349,18 +263,6 @@
         
         let particles = [];      
         let flameParticles = []; 
-        let mouse = { x: undefined, y: undefined, speedX: 0 };
-        let lastMouseX = 0;
-
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-            // 僅在沒有拖曳背景時，使用滑鼠移動計算微風
-            if (!isDragging) {
-                mouse.speedX = (e.clientX - lastMouseX) * 0.15;
-            }
-            lastMouseX = e.clientX;
-        });
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -386,15 +288,8 @@
 
             update() {
                 this.y += this.speedY;
-                this.x += this.speedX + Math.sin(this.wobbleValue) * 0.2 + (mouse.speedX * 0.1);
+                this.x += this.speedX + Math.sin(this.wobbleValue) * 0.2;
                 this.wobbleValue += this.wobbleSpeed;
-
-                if (this.type === 'spark' && mouse.x) {
-                    let dx = mouse.x - this.x;
-                    if (Math.abs(dx) < 150) {
-                        this.x += dx * 0.01;
-                    }
-                }
 
                 if (this.y < -20 || this.y > canvas.height + 20 || this.x < -10 || this.x > canvas.width + 10) {
                     this.reset(false);
@@ -428,7 +323,7 @@
 
             update() {
                 this.y += this.speedY;
-                this.x += this.speedX + Math.sin(this.life * 8) * 0.8 + (mouse.speedX * 0.15);
+                this.x += this.speedX + Math.sin(this.life * 8) * 0.8;
                 this.life -= this.decay;
                 this.size *= 0.95; 
 
@@ -470,40 +365,14 @@
             }
         }
 
-        // 渲染動畫迴圈
         function animate() {
-            // --- 更新 360 度背景位置與慣性物理 ---
-            if (!isDragging) {
-                if (Math.abs(velocity) > 0.1) {
-                    offsetPx += velocity;
-                    velocity *= 0.95; // 阻尼減速
-                    wrapOffset();
-                } else {
-                    offsetPx += autoScrollSpeed; // 恢復緩慢自動滾動
-                    wrapOffset();
-                }
-            }
-            track.style.transform = `translate3d(${offsetPx}px, 0, 0)`;
-
-            // --- 繪製畫布特效 ---
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. 火焰 (lighter 疊加高光模式)
             ctx.globalCompositeOperation = 'lighter';
-            flameParticles.forEach(p => {
-                p.update();
-                p.draw();
-            });
+            flameParticles.forEach(p => { p.update(); p.draw(); });
 
-            // 2. 灰燼 (source-over 一般模式)
             ctx.globalCompositeOperation = 'source-over';
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
-
-            // 風力阻尼漸弱
-            mouse.speedX *= 0.95;
+            particles.forEach(p => { p.update(); p.draw(); });
 
             requestAnimationFrame(animate);
         }
