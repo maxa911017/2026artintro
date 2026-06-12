@@ -6,7 +6,7 @@
     <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=200;300;400&display=swap" rel="stylesheet">
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
     <script>
@@ -100,19 +100,19 @@
 <body class="font-serif antialiased bg-black">
 
     <!-- 
-      【音樂設定】
-      線上預覽已換成風聲測試音效。
-      若在自己電腦測試，請換回：src="music.mp4" 
+      【音樂設定說明】
+      - 本地端測試：請確認同一個資料夾下有 music.mp4 或 music.mp3。並將 src 設為 "music.mp4" 或 "music.mp3"。
+      - 線上展示測試：可以使用下方這首風聲環境音作為備用連結測試。
     -->
-    <audio id="bg-audio" src="https://upload.wikimedia.org/wikipedia/commons/3/34/Sound_Effect_-_Wind_Howling.ogg" loop preload="auto"></audio>
+    <audio id="bg-audio" src="music.mp4" loop preload="auto"></audio>
 
     <a-scene embedded vr-mode-ui="enabled: false">
-        <!-- 
-          【全景圖設定】
-          線上預覽已換成官方測試圖片，並加入 crossorigin="anonymous"。
-          若在自己電腦測試，請換回：src="back.jpg"，並記得使用 VS Code 的 Live Server 開啟網頁！
-        -->
-        <a-sky id="pano-image" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/city.jpg" crossorigin="anonymous" color="#1a1a1a" rotation="0 -90 0"
+        <a-assets>
+            <!-- 優先讀取你的 back.jpg。如果找不到或被安全機制阻擋，自動切換成線上備用圖以免畫面全黑 -->
+            <img id="bg-texture" src="back.jpg" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://cdn.aframe.io/360-image-gallery-boilerplate/img/city.jpg';">
+        </a-assets>
+        
+        <a-sky id="pano-image" src="#bg-texture" color="#1a1a1a" rotation="0 -90 0"
                animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
     </a-scene>
 
@@ -142,11 +142,11 @@
         window.onload = () => {
             document.getElementById('theater-curtain').style.opacity = '0';
             
-            // 處理音效播放（需要使用者點擊畫面才能播放）
+            // 處理音效播放（需要使用者點擊畫面才能播放，此為瀏覽器安全機制）
             const bgAudio = document.getElementById('bg-audio');
             bgAudio.volume = 0.5; // 音量適中
             bgAudio.play().catch(() => {
-                // 如果瀏覽器阻擋自動播放，則等待使用者點擊畫面後播放
+                // 如果自動播放失敗，等待使用者點擊任意處後立即播放
                 document.addEventListener('click', () => {
                     bgAudio.play();
                 }, {once: true});
