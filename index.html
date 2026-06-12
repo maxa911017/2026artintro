@@ -6,7 +6,7 @@
     <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=200;300;400&display=swap" rel="stylesheet">
     <!-- 載入正統 360 度環景引擎 A-Frame -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
@@ -124,13 +124,14 @@
         請使用 <b>VS Code</b> 的 <b>Live Server</b> 擴充功能開啟此網頁，即可正常顯示！
     </div>
 
-    <!-- 背景音樂 -->
-    <audio id="bg-audio" src="music.mp3" loop preload="auto"></audio>
-
     <!-- 真正的 3D 360度環景引擎 -->
     <a-scene id="experience-scene" embedded vr-mode-ui="enabled: false">
         <a-assets>
+            <!-- 360度全景圖資產 -->
             <img id="panorama" src="back.jpg" crossorigin="anonymous">
+            
+            <!-- 將背景音樂放置在 A-Frame 資產管理器中，確保 3D 引擎能預加載並避開與 AudioContext 衝突 -->
+            <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
         </a-assets>
         
         <!-- 360度天空，支援滑鼠拖曳、手機滑動觀看上下左右 -->
@@ -186,14 +187,37 @@
             document.getElementById('local-warning').classList.remove('hidden');
         }
 
+        // 強制解鎖並播放音樂的整合函數
         function startExperience() {
             const startCurtain = document.getElementById('start-curtain');
             const bgAudio = document.getElementById('bg-audio');
             const uiLayer = document.getElementById('ui-layer');
 
-            // 啟動背景音樂
+            // 1. 設定音量與嘗試首次播放
             bgAudio.volume = 0.55;
-            bgAudio.play().catch(e => console.log("音樂播放受阻：", e));
+            
+            const attemptPlay = () => {
+                bgAudio.play()
+                    .then(() => {
+                        console.log("背景音樂成功播放！");
+                    })
+                    .catch(error => {
+                        console.log("自動播放被安全原則阻擋，將註冊點擊解鎖監聽器", error);
+                        
+                        // 2. 備用：註冊一個一次性的全螢幕點擊事件來強制播放
+                        const unlockAudio = () => {
+                            bgAudio.play().then(() => {
+                                window.removeEventListener('click', unlockAudio);
+                                window.removeEventListener('touchstart', unlockAudio);
+                            });
+                        };
+                        window.addEventListener('click', unlockAudio, { passive: true });
+                        window.addEventListener('touchstart', unlockAudio, { passive: true });
+                    });
+            };
+
+            // 執行播放邏輯
+            attemptPlay();
 
             // 開場畫面淡出
             startCurtain.classList.add('fade-out');
