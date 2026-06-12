@@ -6,7 +6,7 @@
     <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=200;300;400&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -30,25 +30,27 @@
             user-select: none;
         }
 
-        /* 【100% 解決 CORS 黑畫面的無縫 360 度環景滾動技術】
-          不使用 3D 引擎，改用 CSS 硬體加速無縫滾動。
-          只要將 back.jpg 放在同目錄下，點兩下打開即能完美顯示！
+        /* 【互動無縫 360 度環景視窗】
+          改由 JavaScript 物理引擎接管，支援滑鼠與手機觸控拖曳
         */
         .panoramic-viewport {
             position: absolute;
             inset: 0;
             overflow: hidden;
             z-index: 1;
+            cursor: grab;
+        }
+        .panoramic-viewport:active {
+            cursor: grabbing;
         }
 
         .panoramic-track {
             position: absolute;
             top: 0;
             left: 0;
-            width: 400%; /* 四倍寬度確保無縫拼接與極限流暢度 */
+            width: 400%; /* 四倍寬度確保無縫拼接 */
             height: 100%;
             display: flex;
-            animation: scrollBackground 240s linear infinite;
             will-change: transform;
         }
 
@@ -59,11 +61,6 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-        }
-
-        @keyframes scrollBackground {
-            0% { transform: translate3d(0, 0, 0); }
-            100% { transform: translate3d(-50%, 0, 0); } /* 滾動過半時完美無縫重置 */
         }
 
         .noise-overlay {
@@ -132,9 +129,7 @@
         }
         .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.25em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,80,0,0.6); }
 
-        /* 【開場歷史帷幕】
-          100% 解決音效無法播放之痛點。點擊時立刻啟動音效，並平滑解鎖頁面。
-        */
+        /* 開場歷史帷幕 */
         #start-curtain {
             position: fixed; inset: 0; background-color: #080808; z-index: 100;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -156,11 +151,10 @@
 <body class="font-serif antialiased bg-black">
 
     <!-- 背景音樂 -->
-    <audio id="bg-audio" src="music.mp3" loop preload="auto"></audio>
+    <audio id="bg-audio" src="music.mp4" loop preload="auto"></audio>
 
     <!-- 
-      100% 成功加載的環景容器 
-      使用兩個相同切片實現無縫連接滾動。
+      100% 成功加載的環景容器（支援手動拖曳）
     -->
     <div id="experience-scene" class="panoramic-viewport">
         <div class="panoramic-track">
@@ -212,29 +206,107 @@
     <div id="theater-curtain"></div>
 
     <script>
-        // 點擊啟動體驗
+        // ==========================================
+        //  360度互動拖曳與物理慣性系統
+        // ==========================================
+        const track = document.querySelector('.panoramic-track');
+        const sceneContainer = document.getElementById('experience-scene');
+        
+        let isDragging = false;
+        let startX = 0;
+        let startOffset = 0;
+        let offsetPx = 0;            // 當前滾動的像素位置
+        let velocity = 0;            // 當前滑動速度（用於物理慣性）
+        let lastX = 0;
+        const autoScrollSpeed = -0.3; // 自動旋轉的微弱速度（向左慢速滾動）
+
+        // 取得單張環景切片的寬度（等於一個視窗寬度）
+        function getMaxScroll() {
+            return window.innerWidth;
+        }
+
+        // 限制與無縫重設滾動位置
+        function wrapOffset() {
+            const maxScroll = getMaxScroll();
+            if (offsetPx < -maxScroll) {
+                offsetPx += maxScroll;
+                startOffset += maxScroll;
+            }
+            if (offsetPx > 0) {
+                offsetPx -= maxScroll;
+                startOffset -= maxScroll;
+            }
+        }
+
+        function handleStart(clientX) {
+            // 如果還沒點擊開場帷幕，禁止拖曳
+            if (!document.getElementById('start-curtain').classList.contains('fade-out')) return;
+            isDragging = true;
+            startX = clientX;
+            lastX = clientX;
+            startOffset = offsetPx;
+            velocity = 0;
+        }
+
+        function handleMove(clientX) {
+            if (!isDragging) return;
+            const dx = clientX - startX;
+            offsetPx = startOffset + dx;
+            
+            // 計算並累積滑動速度（用於釋放後的慣性）
+            velocity = clientX - lastX;
+            lastX = clientX;
+
+            // 連帶影響火焰特效的風向
+            mouse.speedX = velocity * 0.4;
+
+            wrapOffset();
+        }
+
+        function handleEnd() {
+            isDragging = false;
+        }
+
+        // 監聽電腦滑鼠拖曳
+        sceneContainer.addEventListener('mousedown', (e) => handleStart(e.clientX));
+        window.addEventListener('mousemove', (e) => handleMove(e.clientX));
+        window.addEventListener('mouseup', handleEnd);
+
+        // 監聽手機與平板觸控
+        sceneContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) handleStart(e.touches[0].clientX);
+        });
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) handleMove(e.touches[0].clientX);
+        });
+        window.addEventListener('touchend', handleEnd);
+
+
+        // ==========================================
+        //  主要流程控制
+        // ==========================================
         function startExperience() {
             const startCurtain = document.getElementById('start-curtain');
             const bgAudio = document.getElementById('bg-audio');
             const uiLayer = document.getElementById('ui-layer');
 
-            // 100% 播放音樂
+            // 啟動背景音樂
             bgAudio.volume = 0.55;
-            bgAudio.play().catch(e => console.log("播放被阻擋：", e));
+            bgAudio.play().catch(e => console.log("音樂播放受阻：", e));
 
-            // 淡出開場畫面
+            // 開場畫面淡出
             startCurtain.classList.add('fade-out');
             
-            // 延遲顯現 UI
+            // 延遲呈現選單
             setTimeout(() => {
                 uiLayer.style.opacity = '1';
             }, 1000);
 
-            // 啟動環境隨機震動與空襲閃爍
+            // 隨機空襲震動
             startFearFlicker();
         }
 
-        // 自動隱藏與顯現 UI（沉浸模式）
+        // 自動隱藏 UI
         let uiTimer;
         const ui = document.getElementById('ui-layer');
         window.addEventListener('mousedown', () => {
@@ -249,7 +321,6 @@
             }
         });
 
-        // 模擬隨機震炸閃爍
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
             const scene = document.getElementById('experience-scene');
@@ -271,21 +342,23 @@
         }
 
         // ==========================================
-        //  超寫實 Canvas 火焰、火星、灰燼粒子特效系統
+        //  超寫實 Canvas 火焰、火星與灰燼特效
         // ==========================================
         const canvas = document.getElementById('fire-canvas');
         const ctx = canvas.getContext('2d');
         
-        let particles = [];      // 灰燼與微弱火星
-        let flameParticles = []; // 熊熊火焰
+        let particles = [];      
+        let flameParticles = []; 
         let mouse = { x: undefined, y: undefined, speedX: 0 };
         let lastMouseX = 0;
 
-        // 滑鼠移動影響火星風向
         window.addEventListener('mousemove', (e) => {
             mouse.x = e.clientX;
             mouse.y = e.clientY;
-            mouse.speedX = (e.clientX - lastMouseX) * 0.15;
+            // 僅在沒有拖曳背景時，使用滑鼠移動計算微風
+            if (!isDragging) {
+                mouse.speedX = (e.clientX - lastMouseX) * 0.15;
+            }
             lastMouseX = e.clientX;
         });
 
@@ -296,7 +369,6 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // 粒子 1：空中飄揚的灰燼與上升的零星火星
         class AshAndSpark {
             constructor() { this.reset(true); }
             
@@ -314,14 +386,13 @@
 
             update() {
                 this.y += this.speedY;
-                // 加入風阻與滑鼠的風向干擾
                 this.x += this.speedX + Math.sin(this.wobbleValue) * 0.2 + (mouse.speedX * 0.1);
                 this.wobbleValue += this.wobbleSpeed;
 
                 if (this.type === 'spark' && mouse.x) {
                     let dx = mouse.x - this.x;
                     if (Math.abs(dx) < 150) {
-                        this.x += dx * 0.01; // 輕微吸引
+                        this.x += dx * 0.01;
                     }
                 }
 
@@ -337,31 +408,29 @@
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.shadowBlur = 0; // 重置
+                ctx.shadowBlur = 0; 
             }
         }
 
-        // 粒子 2：底部蔓延與起伏的高級火焰粒子
         class FlameParticle {
             constructor() { this.reset(); this.y = canvas.height + Math.random() * 100; }
 
             reset() {
                 this.x = Math.random() * canvas.width;
                 this.y = canvas.height + 20 + Math.random() * 30;
-                this.size = Math.random() * 50 + 20; // 火焰團大小
-                this.speedY = -(Math.random() * 3 + 1); // 火焰向上竄動速度
+                this.size = Math.random() * 50 + 20; 
+                this.speedY = -(Math.random() * 3 + 1); 
                 this.speedX = (Math.random() - 0.5) * 1.5;
                 this.life = 1.0;
-                this.decay = Math.random() * 0.015 + 0.008; // 生命消逝速度
+                this.decay = Math.random() * 0.015 + 0.008; 
                 this.heat = Math.random() > 0.4 ? 'orange' : 'yellow';
             }
 
             update() {
                 this.y += this.speedY;
-                // 受滑鼠與擺動風速影響
                 this.x += this.speedX + Math.sin(this.life * 8) * 0.8 + (mouse.speedX * 0.15);
                 this.life -= this.decay;
-                this.size *= 0.95; // 上升時火焰慢慢收縮
+                this.size *= 0.95; 
 
                 if (this.life <= 0 || this.size <= 1) {
                     this.reset();
@@ -390,39 +459,50 @@
             }
         }
 
-        // 初始化粒子陣列
         function initCanvas() {
             particles = [];
             flameParticles = [];
-            // 灰燼與上升小火星
             for (let i = 0; i < 450; i++) {
                 particles.push(new AshAndSpark());
             }
-            // 底部燃燒的火海粒子
             for (let i = 0; i < 180; i++) {
                 flameParticles.push(new FlameParticle());
             }
         }
 
-        // 主渲染動畫迴圈
+        // 渲染動畫迴圈
         function animate() {
+            // --- 更新 360 度背景位置與慣性物理 ---
+            if (!isDragging) {
+                if (Math.abs(velocity) > 0.1) {
+                    offsetPx += velocity;
+                    velocity *= 0.95; // 阻尼減速
+                    wrapOffset();
+                } else {
+                    offsetPx += autoScrollSpeed; // 恢復緩慢自動滾動
+                    wrapOffset();
+                }
+            }
+            track.style.transform = `translate3d(${offsetPx}px, 0, 0)`;
+
+            // --- 繪製畫布特效 ---
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. 繪製底部火海（用 lighter 混合模式實現高光重疊發熱）
+            // 1. 火焰 (lighter 疊加高光模式)
             ctx.globalCompositeOperation = 'lighter';
             flameParticles.forEach(p => {
                 p.update();
                 p.draw();
             });
 
-            // 2. 繪製飄逸灰燼（用 source-over 一般模式避免疊加過亮）
+            // 2. 灰燼 (source-over 一般模式)
             ctx.globalCompositeOperation = 'source-over';
             particles.forEach(p => {
                 p.update();
                 p.draw();
             });
 
-            // 慢慢衰減滑鼠風力阻尼
+            // 風力阻尼漸弱
             mouse.speedX *= 0.95;
 
             requestAnimationFrame(animate);
