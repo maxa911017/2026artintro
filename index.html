@@ -99,11 +99,20 @@
 </head>
 <body class="font-serif antialiased bg-black">
 
-    <audio id="bg-audio" src="music.mp3" loop preload="auto"></audio>
+    <!-- 
+      【音樂設定】
+      線上預覽已換成風聲測試音效。
+      若在自己電腦測試，請換回：src="music.mp4" 
+    -->
+    <audio id="bg-audio" src="https://upload.wikimedia.org/wikipedia/commons/3/34/Sound_Effect_-_Wind_Howling.ogg" loop preload="auto"></audio>
 
     <a-scene embedded vr-mode-ui="enabled: false">
-        <!-- 提醒：若在自己電腦測試出現黑畫面，請使用 VS Code 的 Live Server 等本地伺服器開啟 -->
-        <a-sky id="pano-image" src="back.jpg" color="#1a1a1a" rotation="0 -90 0"
+        <!-- 
+          【全景圖設定】
+          線上預覽已換成官方測試圖片，並加入 crossorigin="anonymous"。
+          若在自己電腦測試，請換回：src="back.jpg"，並記得使用 VS Code 的 Live Server 開啟網頁！
+        -->
+        <a-sky id="pano-image" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/city.jpg" crossorigin="anonymous" color="#1a1a1a" rotation="0 -90 0"
                animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
     </a-scene>
 
@@ -132,10 +141,17 @@
     <script>
         window.onload = () => {
             document.getElementById('theater-curtain').style.opacity = '0';
+            
+            // 處理音效播放（需要使用者點擊畫面才能播放）
             const bgAudio = document.getElementById('bg-audio');
+            bgAudio.volume = 0.5; // 音量適中
             bgAudio.play().catch(() => {
-                document.addEventListener('click', () => bgAudio.play(), {once: true});
+                // 如果瀏覽器阻擋自動播放，則等待使用者點擊畫面後播放
+                document.addEventListener('click', () => {
+                    bgAudio.play();
+                }, {once: true});
             });
+
             initCanvas();
             startFearFlicker();
             setupAutoHide();
@@ -187,7 +203,7 @@
             window.addEventListener('resize', resizeCanvas);
             resizeCanvas();
 
-            // ================= 灰燼與火星 (原有) =================
+            // ================= 灰燼與火星 =================
             class Particle {
                 constructor() { this.reset(); this.y = Math.random() * canvas.height; }
                 reset() {
@@ -210,7 +226,7 @@
                 }
             }
 
-            // ================= 新增：底部火焰粒子系統 =================
+            // ================= 底部火焰粒子系統 =================
             class FireParticle {
                 constructor() { this.reset(); this.y = canvas.height + Math.random() * 50; }
                 reset() {
