@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'serif': ['"Noto Serif TC"', 'serif'] },
+                    colors: { 'ash-dark': '#050505', 'blood-red': '#4a0000' }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: #000;
+            color: #d1d1d1;
+            overflow: hidden; 
+            overscroll-behavior: none;
+            user-select: none;
+        }
+
+        .a-enter-vr { display: none !important; }
+        
+        .noise-overlay {
+            position: fixed; inset: 0;
+            background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+            opacity: 0.06; pointer-events: none; z-index: 20; mix-blend-mode: overlay;
+        }
+
+        .vignette {
+            position: fixed; inset: 0;
+            background: radial-gradient(circle at center, transparent 15%, #000000 110%);
+            pointer-events: none; z-index: 10;
+        }
+
+        .flicker-overlay {
+            position: fixed; inset: 0; background-color: #2a0000; opacity: 0;
+            pointer-events: none; z-index: 15; mix-blend-mode: color-burn;
+        }
+
+        .flicker-active { animation: bombFlicker 0.4s ease-out; }
+        @keyframes bombFlicker {
+            0% { opacity: 0; } 20% { opacity: 0.5; } 40% { opacity: 0.1; } 60% { opacity: 0.6; } 100% { opacity: 0; }
+        }
+
+        .shake-active { animation: groundShake 0.4s ease-out; }
+        @keyframes groundShake {
+            0% { transform: translate(0, 0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(3px, -3px); } 60% { transform: translate(-3px, -2px); } 80% { transform: translate(2px, 2px); } 100% { transform: translate(0, 0); }
+        }
+
+        /* 強化底層環境火光 */
+        .fire-glow {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50vh;
+            background: linear-gradient(to top, rgba(220, 30, 0, 0.5) 0%, rgba(80, 0, 0, 0.2) 60%, transparent 100%);
+            pointer-events: none; z-index: 4; /* 放在 Canvas 後方，增加層次 */
+            animation: firePulse 3s infinite alternate ease-in-out;
+            mix-blend-mode: screen;
+            transform-origin: bottom;
+        }
+        @keyframes firePulse { 
+            0% { opacity: 0.3; transform: scaleY(0.9); } 
+            50% { opacity: 0.6; transform: scaleY(1.05); }
+            100% { opacity: 0.8; transform: scaleY(1); } 
+        }
+
+        #ui-layer {
+            position: fixed; inset: 0; z-index: 30;
+            pointer-events: none; display: flex; flex-direction: column;
+            justify-content: space-between; transition: opacity 1s ease;
+            padding: max(2.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+        }
+
+        .pointer-events-auto { pointer-events: auto; }
+
+        .act-btn {
+            position: relative; color: #8c8c8c; transition: all 0.6s ease;
+            padding: 10px 0; opacity: 0.75;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.3em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,100,50,0.5); }
+
+        #theater-curtain {
+            position: fixed; inset: 0; background-color: #000; z-index: 50;
+            opacity: 1; pointer-events: none; transition: opacity 3s ease;
+        }
+    </style>
+</head>
+<body class="font-serif antialiased bg-black">
+
+    <audio id="bg-audio" src="music.mp4" loop preload="auto"></audio>
+
+    <a-scene embedded vr-mode-ui="enabled: false">
+        <a-sky id="pano-image" src="back.png" color="#1a1a1a" rotation="0 -90 0"
+               animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
+    </a-scene>
+
+    <div class="fire-glow"></div>
+    <canvas id="ash-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
+    <div class="vignette"></div>
+    <div class="noise-overlay"></div>
+    <div id="flicker-layer" class="flicker-overlay"></div>
+
+    <div id="ui-layer">
+        <header class="text-left drop-shadow-2xl">
+            <h1 class="text-2xl md:text-4xl font-light tracking-[0.4em] text-gray-200">煙霧中長大的孩子</h1>
+            <h2 class="text-xs md:text-sm text-gray-400 tracking-[0.3em] font-light mt-2">防空洞裡學會的事</h2>
+        </header>
+
+        <nav class="flex flex-col items-end gap-6 mt-auto pointer-events-auto">
+            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base">幕一：躲貓貓的規則</button>
+            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base">幕二：惡魔的翅膀</button>
+            <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base">幕三：天空的禮物</button>
+            <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base">終幕：進入記憶</button>
+        </nav>
+    </div>
+
+    <div id="theater-curtain"></div>
+
+    <script>
+        window.onload = () => {
+            document.getElementById('theater-curtain').style.opacity = '0';
+            const bgAudio = document.getElementById('bg-audio');
+            bgAudio.play().catch(() => {
+                document.addEventListener('click', () => bgAudio.play(), {once: true});
+            });
+            initCanvas();
+            startFearFlicker();
+            setupAutoHide();
+        };
+
+        function setupAutoHide() {
+            const ui = document.getElementById('ui-layer');
+            let timer;
+            window.addEventListener('mousedown', () => {
+                ui.style.opacity = '0.1';
+                clearTimeout(timer);
+            });
+            window.addEventListener('mouseup', () => {
+                timer = setTimeout(() => ui.style.opacity = '1', 1500);
+            });
+        }
+
+        function startFearFlicker() {
+            const flicker = document.getElementById('flicker-layer');
+            const scene = document.querySelector('a-scene');
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    flicker.classList.add('flicker-active');
+                    scene.classList.add('shake-active');
+                    setTimeout(() => {
+                        flicker.classList.remove('flicker-active');
+                        scene.classList.remove('shake-active');
+                    }, 400);
+                }
+            }, 5000);
+        }
+
+        function executeChapter(num) {
+            document.getElementById('theater-curtain').style.opacity = '1';
+            setTimeout(() => window.location.href = `part${num}.html`, 3000);
+        }
+
+        function initCanvas() {
+            const canvas = document.getElementById('ash-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let fireParticles = [];
+
+            // 確保畫布自適應視窗大小
+            function resizeCanvas() {
+                canvas.width = window.innerWidth; 
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // ================= 灰燼與火星 (原有) =================
+            class Particle {
+                constructor() { this.reset(); this.y = Math.random() * canvas.height; }
+                reset() {
+                    this.type = Math.random() > 0.7 ? 'spark' : 'ash';
+                    this.x = Math.random() * canvas.width;
+                    this.y = this.type === 'spark' ? canvas.height + 10 : -10;
+                    this.speedY = this.type === 'spark' ? -(Math.random() * 2 + 1) : Math.random() * 0.5 + 0.1;
+                    this.speedX = (Math.random() - 0.5) * 0.5;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.opacity = Math.random() * 0.6 + 0.2;
+                }
+                update() {
+                    this.y += this.speedY;
+                    this.x += this.speedX;
+                    if (this.y < -20 || this.y > canvas.height + 20) this.reset();
+                }
+                draw() {
+                    ctx.fillStyle = this.type === 'spark' ? `rgba(255, 100, 20, ${this.opacity})` : `rgba(80, 80, 80, ${this.opacity})`;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            // ================= 新增：底部火焰粒子系統 =================
+            class FireParticle {
+                constructor() { this.reset(); this.y = canvas.height + Math.random() * 50; }
+                reset() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = canvas.height + 10 + Math.random() * 20; // 從底部誕生
+                    this.size = Math.random() * 40 + 15; // 較大的火焰半徑
+                    this.speedY = -(Math.random() * 2.5 + 0.5); // 向上飄
+                    this.speedX = (Math.random() - 0.5) * 1.5; // 左右搖曳
+                    this.life = Math.random() * 0.8 + 0.2; // 粒子生命週期
+                    this.decay = Math.random() * 0.015 + 0.005; // 衰減速度
+                }
+                update() {
+                    this.y += this.speedY;
+                    this.x += Math.sin(this.life * 10) * 1.5; // 模擬火焰波浪搖曳
+                    this.life -= this.decay;
+                    this.size *= 0.96; // 逐漸縮小
+                    if (this.life <= 0 || this.size <= 0.5) this.reset();
+                }
+                draw() {
+                    // 根據生命週期漸變顏色 (黃 -> 橘 -> 紅 -> 透明)
+                    const a = this.life * 0.6;
+                    const r = 255;
+                    const g = Math.floor(180 * this.life);
+                    const b = 0;
+                    
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
+                    gradient.addColorStop(1, `rgba(${r}, 30, 0, 0)`);
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath(); 
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < 600; i++) particles.push(new Particle());
+            for (let i = 0; i < 150; i++) fireParticles.push(new FireParticle()); // 建立火焰粒子
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 1. 繪製底部火焰 (使用 lighter 混合模式產生光暈發散效果)
+                ctx.globalCompositeOperation = 'lighter';
+                fireParticles.forEach(p => { p.update(); p.draw(); });
+
+                // 2. 繪製灰燼與火星 (切換回一般模式)
+                ctx.globalCompositeOperation = 'source-over';
+                particles.forEach(p => { p.update(); p.draw(); });
+
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>
