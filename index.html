@@ -99,20 +99,10 @@
 </head>
 <body class="font-serif antialiased bg-black">
 
-    <!-- 
-      【音樂設定說明】
-      - 本地端測試：請確認同一個資料夾下有 music.mp4 或 music.mp3。並將 src 設為 "music.mp4" 或 "music.mp3"。
-      - 線上展示測試：可以使用下方這首風聲環境音作為備用連結測試。
-    -->
     <audio id="bg-audio" src="music.mp4" loop preload="auto"></audio>
 
     <a-scene embedded vr-mode-ui="enabled: false">
-        <a-assets>
-            <!-- 優先讀取你的 back.jpg。如果找不到或被安全機制阻擋，自動切換成線上備用圖以免畫面全黑 -->
-            <img id="bg-texture" src="back.jpg" crossorigin="anonymous" onerror="this.onerror=null; this.src='https://cdn.aframe.io/360-image-gallery-boilerplate/img/city.jpg';">
-        </a-assets>
-        
-        <a-sky id="pano-image" src="#bg-texture" color="#1a1a1a" rotation="0 -90 0"
+        <a-sky id="pano-image" src="back.jpg" color="#1a1a1a" rotation="0 -90 0"
                animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
     </a-scene>
 
