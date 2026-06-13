@@ -3,511 +3,734 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
-    
+    <title>螢火蟲的灰燼</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
-    <!-- 載入正統 360 度環景引擎 A-Frame -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { 'serif': ['"Noto Serif TC"', 'serif'] },
-                    colors: { 'ash-dark': '#050505', 'blood-red': '#4a0000' }
-                }
-            }
-        }
-    </script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400;600&display=swap');
+
         body, html {
             margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            background-color: #000;
-            color: #d1d1d1;
-            overflow: hidden; 
-            overscroll-behavior: none;
-            user-select: none;
+            width: 100vw; height: 100dvh;
+            background-color: #000; overflow: hidden;
+            font-family: 'Noto Serif TC', serif;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            touch-action: none; overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .a-enter-vr { display: none !important; }
-
-        .noise-overlay {
+        .grain {
             position: fixed; inset: 0;
-            background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
-            opacity: 0.05; pointer-events: none; z-index: 20; mix-blend-mode: overlay;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtP38+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAJklEQVQ4y2NgGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFAwAAwB7AQABK5Sj1AAAAABJRU5ErkJggg==');
+            opacity: 0.12; pointer-events: none; z-index: 999;
+            animation: grainShift 0.4s steps(2) infinite;
         }
+        @keyframes grainShift { 0% { background-position: 0 0; } 100% { background-position: 10px 10px; } }
 
-        .vignette {
-            position: fixed; inset: 0;
-            background: radial-gradient(circle at center, transparent 10%, #000000 115%);
-            pointer-events: none; z-index: 10;
-        }
-
-        .flicker-overlay {
-            position: fixed; inset: 0; background-color: #2a0300; opacity: 0;
-            pointer-events: none; z-index: 15; mix-blend-mode: color-burn;
-        }
-
-        .flicker-active { animation: bombFlicker 0.4s ease-out; }
-        @keyframes bombFlicker {
-            0% { opacity: 0; } 20% { opacity: 0.6; } 40% { opacity: 0.1; } 60% { opacity: 0.7; } 100% { opacity: 0; }
-        }
-
-        .shake-active { animation: groundShake 0.5s ease-out; }
-        @keyframes groundShake {
-            0% { transform: translate(0, 0); } 
-            15% { transform: translate(-5px, 4px) rotate(-0.5deg); } 
-            30% { transform: translate(5px, -4px) rotate(0.5deg); } 
-            45% { transform: translate(-4px, -2px) rotate(-0.2deg); } 
-            60% { transform: translate(3px, 3px) rotate(0.1deg); } 
-            75% { transform: translate(-1px, -1px); }
-            100% { transform: translate(0, 0); }
-        }
-
-        .fire-glow {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 60vh;
-            background: linear-gradient(to top, rgba(200, 30, 0, 0.45) 0%, rgba(100, 10, 0, 0.15) 50%, transparent 100%);
-            pointer-events: none; z-index: 4; 
-            animation: firePulse 4s infinite alternate ease-in-out;
-            mix-blend-mode: screen;
-            transform-origin: bottom;
-        }
-        @keyframes firePulse { 
-            0% { opacity: 0.4; transform: scaleY(0.95); } 
-            50% { opacity: 0.7; transform: scaleY(1.08); }
-            100% { opacity: 0.5; transform: scaleY(1); } 
-        }
-
-        #ui-layer {
-            position: fixed; inset: 0; z-index: 30;
-            pointer-events: none; display: flex; flex-direction: column;
-            justify-content: space-between; transition: opacity 1s ease;
-            padding: max(2.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
-            opacity: 0; 
-        }
-
-        .pointer-events-auto { pointer-events: auto; }
-
-        .act-btn {
-            position: relative; color: #a3a3a3; transition: all 0.6s ease;
-            padding: 10px 0; opacity: 0.75;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
-        }
-        .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.25em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,80,0,0.6); }
-
-        #start-curtain {
-            position: fixed; inset: 0; background-color: #080808; z-index: 100;
+        #init-screen {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1), transform 2s ease;
-            cursor: pointer;
+            transition: opacity 2s ease-in-out; cursor: pointer;
         }
-        #start-curtain.fade-out {
-            opacity: 0;
-            pointer-events: none;
-            transform: scale(1.05);
+        .init-text {
+            color: rgba(255, 255, 255, 0.9); font-size: clamp(1.2rem, 5vw, 1.5rem);
+            letter-spacing: 0.5em; font-weight: 300; margin-left: 0.5em;
+            animation: pulse-slow 4s infinite; text-shadow: 0 0 20px rgba(255,255,255,0.6);
+            text-align: center; white-space: nowrap;
+        }
+        .init-subtext {
+            color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; letter-spacing: 0.2em; margin-top: 4vh;
+            text-align: center;
         }
 
-        #theater-curtain {
-            position: fixed; inset: 0; background-color: #000; z-index: 50;
-            opacity: 0; pointer-events: none; transition: opacity 2s ease;
+        #pause-screen {
+            position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: opacity 0.5s ease;
+        }
+        .pause-text {
+            color: rgba(255, 255, 255, 0.7); font-size: clamp(0.9rem, 3.5vw, 1.2rem);
+            letter-spacing: 0.4em; font-weight: 300; text-align: center; margin-left: 0.4em;
+            animation: pulse-slow 3s infinite; text-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+
+        #webgl-container { position: absolute; inset: 0; z-index: 1; }
+
+        #darkness-overlay {
+            position: absolute; inset: 0; pointer-events: none; z-index: 2;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%);
+            transition: opacity 4s ease-in-out;
+        }
+
+        #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+        .instruction {
+            position: absolute; bottom: 8%; color: rgba(255, 255, 255, 0.8);
+            font-size: clamp(0.85rem, 3.5vw, 1rem); letter-spacing: 0.4em;
+            animation: pulse-slow 4s infinite; text-align: center;
+            transition: opacity 2s ease; text-shadow: 0 0 15px rgba(0,0,0,1);
+            width: 85vw; overflow-wrap: break-word; white-space: normal;
+        }
+        .hidden-hint { opacity: 0; pointer-events: none; }
+        @keyframes pulse-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        #story-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background-color: rgba(0, 0, 0, 0.88);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 1.5s ease;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        #story-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .story-text-container {
+            width: 85vw;
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        
+        #action-text {
+            color: #999; font-size: clamp(0.9rem, 4vw, 1.1rem); letter-spacing: 0.2em; line-height: 2;
+            margin-bottom: 5vh; opacity: 0; transition: opacity 2s ease, filter 2s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3vh;
+            font-weight: 300; filter: blur(5px);
+            display: block; width: 100%; text-align: center;
+            word-break: normal; overflow-wrap: break-word; white-space: normal;
+        }
+        #action-text.show { opacity: 1; filter: blur(0px); }
+        
+        #quote-text {
+            color: #ffcc66; font-size: clamp(1.1rem, 5.5vw, 1.6rem); letter-spacing: 0.15em; line-height: 2.2;
+            text-shadow: 0 0 25px rgba(255, 204, 102, 0.4); min-height: 25vh; font-weight: 300;
+            display: block; width: 100%; text-align: center;
+            word-break: normal; overflow-wrap: break-word; white-space: normal;
+        }
+        
+        .typewriter-cursor::after {
+            content: '|'; color: #ffcc66; animation: blink 1s step-end infinite; margin-left: 2px; opacity: 0.8;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #final-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; opacity: 0; transition: opacity 6s ease-in; z-index: 15; pointer-events: none;
+            width: 90vw; max-width: 800px; padding: 0 2vw; box-sizing: border-box;
+        }
+        #final-text {
+            font-size: clamp(1.8rem, 8vw, 4rem); font-weight: 300; letter-spacing: 0.3em;
+            color: #fff; text-shadow: 0 0 50px rgba(255, 200, 100, 1), 0 0 100px rgba(255, 100, 50, 0.6);
+            margin-bottom: 4vh; margin-left: 0.15em;
+            display: block; overflow-wrap: break-word; white-space: normal; line-height: 1.5;
+        }
+        #final-subtext {
+            font-size: clamp(0.9rem, 4vw, 1.4rem); color: rgba(255, 220, 150, 0.95);
+            letter-spacing: 0.3em; font-weight: 200; margin-left: 0.15em; text-shadow: 0 0 15px #000;
+            display: block; overflow-wrap: break-word; white-space: normal; line-height: 2;
+        }
+
+        .ripple {
+            position: absolute; border: 2px solid rgba(255, 220, 100, 0.9);
+            border-radius: 50%; transform: translate(-50%, -50%) scale(0);
+            pointer-events: none; z-index: 5;
+            animation: ripple-anim 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+        @keyframes ripple-anim {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; box-shadow: 0 0 80px rgba(255, 180, 50, 1) inset; border-width: 6px; }
+            50% { opacity: 0.6; border-width: 2px; }
+            100% { transform: translate(-50%, -50%) scale(15); opacity: 0; box-shadow: 0 0 0px rgba(255, 150, 50, 0) inset; border-width: 0px; }
         }
     </style>
 </head>
-<body class="font-serif antialiased bg-black">
-
-    <!-- 本機直接開啟的黑畫面警告 -->
-    <div id="local-warning" class="hidden fixed top-0 left-0 w-full bg-red-700 text-white text-xs md:text-sm text-center py-3 px-4 z-[999] shadow-lg">
-        ⚠️ <b>注意：</b>您目前直接雙擊開啟了檔案。瀏覽器安全機制會阻擋 360 度圖片載入（導致黑畫面）。<br>
-        請使用 <b>VS Code</b> 的 <b>Live Server</b> 擴充功能開啟此網頁，即可正常顯示！
+<body>
+    <div class="grain"></div>
+    <div id="init-screen">
+        <div class="init-text">輕觸畫面，進入廢墟</div>
+        <div class="init-subtext">強烈建議佩戴耳機，感受極致沈浸</div>
+    </div>
+    
+    <div id="pause-screen">
+        <div class="pause-text">畫面已暫停 · 輕觸以繼續</div>
     </div>
 
-    <!-- 真正的 3D 360度環景引擎 -->
-    <a-scene id="experience-scene" embedded vr-mode-ui="enabled: false">
-        <a-assets>
-            <img id="panorama" src="back.jpg" crossorigin="anonymous">
-            <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
-        </a-assets>
-        
-        <a-sky src="#panorama" rotation="0 -90 0" 
-               animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
-               
-        <a-entity camera look-controls="reverseMouseDrag: true"></a-entity>
-    </a-scene>
-
-    <!-- 環境火光與特效 -->
-    <div class="fire-glow"></div>
-    <canvas id="fire-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
-    <div class="vignette"></div>
-    <div class="noise-overlay"></div>
-    <div id="flicker-layer" class="flicker-overlay"></div>
-
-    <!-- 互動開場帷幕 -->
-    <div id="start-curtain" onclick="startExperience()">
-        <div class="text-center px-6">
-            <p class="text-xs tracking-[0.4em] text-red-700 font-light mb-4 uppercase">Shellproof Shelter Memories</p>
-            <h2 class="text-xl md:text-2xl font-light tracking-[0.5em] text-gray-300 mb-8">防空洞深處，我們聽著外面的聲音...</h2>
-            <div class="inline-block px-8 py-3 border border-stone-800 text-stone-400 text-xs tracking-[0.3em] uppercase hover:text-white hover:border-red-900 transition-all duration-700 ease-in-out">
-                點擊 進入記憶
-            </div>
-        </div>
-    </div>
-
-    <!-- UI 選單層 -->
+    <div id="darkness-overlay"></div>
+    <div id="webgl-container"></div>
+    
     <div id="ui-layer">
-        <header class="text-left drop-shadow-2xl">
-            <h1 class="text-2xl md:text-4xl font-light tracking-[0.4em] text-gray-200">煙霧中長大的孩子</h1>
-            <h2 class="text-xs md:text-sm text-gray-400 tracking-[0.3em] font-light mt-2">防空洞裡學會的事</h2>
-        </header>
-
-        <!-- 新增：左下角資訊按鈕 -->
-        <div class="absolute bottom-6 left-6 flex flex-col items-start gap-4 pointer-events-auto">
-            <button onclick="showInfo('concept')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">劇本概念</button>
-            <button onclick="showInfo('team')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">製作團隊</button>
-        </div>
-
-        <nav class="flex flex-col items-end gap-6 mt-auto pointer-events-auto">
-            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base font-light">幕一：躲貓貓的規則</button>
-            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">幕二：惡魔的翅膀</button>
-            <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base font-light">幕三：天空的禮物</button>
-            <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base font-light">終幕：進入記憶</button>
-        </nav>
-    </div>
-
-    <!-- 密碼解鎖對話框 -->
-    <div id="password-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
-        <div class="text-center bg-black/60 p-8 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-            <h3 class="text-gray-300 tracking-[0.3em] font-light mb-6 text-sm md:text-base">此記憶已封印，請輸入解鎖密碼</h3>
-            <input type="password" id="chapter-password" 
-                   class="bg-transparent border-b border-gray-600 text-white text-center text-xl tracking-[0.5em] outline-none px-4 py-2 mb-2 w-48 focus:border-red-800 transition-colors"
-                   autocomplete="off">
-            <div id="pwd-error" class="text-red-700 text-xs tracking-[0.2em] h-4 mb-6 opacity-0 transition-opacity">密碼錯誤，請重新回憶</div>
-            <div class="flex gap-10 justify-center">
-                <button onclick="closePasswordModal()" class="text-gray-500 text-xs tracking-[0.2em] hover:text-white transition-colors">放棄</button>
-                <button onclick="checkPassword()" class="text-gray-300 text-xs tracking-[0.2em] hover:text-red-600 transition-colors">解鎖</button>
-            </div>
+        <div id="hint-text" class="instruction hidden-hint">滑動環視四周，點擊飛灰釋放思念</div>
+        <div id="final-container">
+            <div id="final-text">一切都會變得更好</div>
+            <div id="final-subtext">那些未曾送達的愛，<br>終將化作漫天星火照亮黑夜</div>
         </div>
     </div>
 
-    <!-- 新增：資訊彈出視窗 -->
-    <div id="info-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
-        <div class="bg-black/80 p-8 md:p-12 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-2xl w-[85%] relative text-center">
-            <button onclick="closeInfo()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors text-xl">✕</button>
-            <h3 id="info-title" class="text-gray-200 tracking-[0.4em] font-light mb-8 text-lg md:text-xl border-b border-stone-800 pb-4 inline-block">標題</h3>
-            <p id="info-content" class="text-gray-400 tracking-[0.2em] font-light leading-relaxed text-sm md:text-base text-left min-h-[150px]"></p>
+    <div id="story-overlay">
+        <div class="story-text-container">
+            <p id="action-text"></p>
+            <div id="quote-text"></div>
         </div>
     </div>
-
-    <!-- 切換章節黑幕 -->
-    <div id="theater-curtain"></div>
 
     <script>
-        // 偵測是否直接雙擊打開本地檔案
-        if (window.location.protocol === 'file:') {
-            document.getElementById('local-warning').classList.remove('hidden');
+        const PANORAMA_IMAGE_URL = 'ruin.jpg'; // 可替換為你的全景圖網址
+        
+        let isAudioReady = false;
+        let droneSynth, hopePad, chimeSynth, typeNoise, bgNoise, bgFilter, boomSynth;
+
+        // 狀態控制變數
+        let isGameStarted = false; 
+        let isPaused = false;
+
+        function safeAudio(action) {
+            if (!isAudioReady || typeof Tone === 'undefined' || !Tone.context) return;
+            try {
+                if (Tone.context.state === 'running') {
+                    action();
+                }
+            } catch (error) {
+                console.warn("已攔截音效錯誤", error);
+            }
         }
 
-        // 強制解鎖並播放音樂的整合函數
-        function startExperience() {
-            const startCurtain = document.getElementById('start-curtain');
-            const bgAudio = document.getElementById('bg-audio');
-            const uiLayer = document.getElementById('ui-layer');
+        window.showPauseScreen = function() {
+            if (!isGameStarted) return; // 只有遊戲開始後才需要暫停
+            isPaused = true;            // 標記為暫停狀態
+            document.getElementById('pause-screen').style.display = 'flex';
+            if (isAudioReady) Tone.Destination.mute = true;
+        };
 
-            bgAudio.volume = 0.55;
-            
-            const attemptPlay = () => {
-                const playPromise = bgAudio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        console.log("背景音樂成功播放！");
-                    }).catch(error => {
-                        console.log("自動播放被安全原則阻擋或無音訊來源", error);
-                        const unlockAudio = () => {
-                            const unlockPromise = bgAudio.play();
-                            if (unlockPromise !== undefined) {
-                                unlockPromise.then(() => {
-                                    window.removeEventListener('click', unlockAudio);
-                                    window.removeEventListener('touchstart', unlockAudio);
-                                }).catch(e => {
-                                    console.warn("點擊後仍無法播放:", e);
-                                    window.removeEventListener('click', unlockAudio);
-                                    window.removeEventListener('touchstart', unlockAudio);
-                                });
-                            }
-                        };
-                        window.addEventListener('click', unlockAudio, { passive: true });
-                        window.addEventListener('touchstart', unlockAudio, { passive: true });
-                    });
+        document.getElementById('pause-screen').addEventListener('click', async () => {
+            if (isAudioReady && typeof Tone !== 'undefined' && Tone.context) {
+                if (Tone.context.state !== 'running') {
+                    await Tone.context.resume();
                 }
-            };
+                Tone.Destination.mute = false;
+            }
+            document.getElementById('pause-screen').style.display = 'none';
+            // 給予微小延遲解除暫停，防止點擊穿透到背景
+            setTimeout(() => { isPaused = false; }, 50);
+        });
 
-            attemptPlay();
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                isDragging = false;
+                if (isAudioReady) Tone.Destination.mute = true;
+            } else {
+                showPauseScreen();
+            }
+        });
 
-            startCurtain.classList.add('fade-out');
+        async function initAudio() {
+            if (isAudioReady) return;
+            try {
+                await Tone.start();
+                bgFilter = new Tone.Filter(300, "lowpass").toDestination();
+                bgNoise = new Tone.Noise("pink").connect(bgFilter);
+                bgNoise.volume.value = -12;
+
+                droneSynth = new Tone.FMSynth({
+                    harmonicity: 0.5, modulationIndex: 5,
+                    oscillator: { type: "sine" }, modulation: { type: "triangle" },
+                    envelope: { attack: 4, decay: 2, sustain: 1, release: 5 }
+                }).toDestination();
+                droneSynth.volume.value = -15;
+
+                const reverb = new Tone.Reverb({ decay: 10, wet: 0.7 }).toDestination();
+                
+                hopePad = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "sine" }, envelope: { attack: 3, decay: 2, sustain: 0.8, release: 5 }
+                }).connect(reverb);
+                hopePad.volume.value = -Infinity;
+
+                chimeSynth = new Tone.PolySynth(Tone.MetalSynth, {
+                    frequency: 250, envelope: { attack: 0.01, decay: 2, release: 2 },
+                    harmonicity: 4.5, modulationIndex: 20, resonance: 4000, octaves: 1.5
+                }).connect(reverb);
+                chimeSynth.volume.value = -12;
+
+                boomSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.08, octaves: 6, oscillator: { type: "sine" },
+                    envelope: { attack: 0.001, decay: 2.5, sustain: 0, release: 2 }
+                }).connect(reverb);
+                boomSynth.volume.value = -5;
+
+                typeNoise = new Tone.NoiseSynth({
+                    noise: { type: 'brown' }, envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.05 }
+                }).toDestination();
+                typeNoise.volume.value = -22;
+
+                isAudioReady = true;
+                bgNoise.start();
+                droneSynth.triggerAttack("C2");
+                hopePad.triggerAttack(["C3", "G3"]);
+            } catch (error) { console.error("音訊初始化失敗:", error); }
+        }
+
+        let isStoryActive = false;
+        let isEnding = false;
+        let currentStoryIndex = 0;
+
+        const warMessages = [
+            { action: "你撥開瓦礫，觸碰了一面碎裂的螢幕。\n微弱的亮光，宛如它不甘的脈搏。", quote: "「電量剩 2%。\n如果我沒能出去，請幫我照顧好媽媽。」" },
+            { action: "灰燼掩埋著一個失去溫度的鐵盒，\n裡頭正反覆重播著最後的牽掛。", quote: "「地下室的空氣越來越稀薄了。\n小寶，爸爸永遠愛你，你要勇敢。」" },
+            { action: "你拾起一張被戰火燒毀一半的紙條，\n上面的字跡早已因淚水而暈染開來。", quote: "「外面終於安靜下來了，但我不敢出去。\n好冷。」" },
+            { action: "在沒有訊號的荒原裡，\n一個紅色驚嘆號將最後的愛意，永遠困在了發件匣。", quote: "「他們說救援不會來了。\n我們把最後的水留給了孩子。」" },
+            { action: "在最深最深的黑夜中，\n一卷底片記錄下了他們對黎明最後的渴望。", quote: "「天亮了。\n這可能是我最後一次看到日出...」" }
+        ];
+
+        const container3D = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        let currentFov = 70;
+        let targetFov = 70;
+        const camera = new THREE.PerspectiveCamera(currentFov, window.innerWidth / window.innerHeight, 0.1, 1500);
+        
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container3D.appendChild(renderer.domElement);
+
+        const textureLoader = new THREE.TextureLoader();
+        const panoramaGeo = new THREE.SphereGeometry(800, 60, 40);
+        panoramaGeo.scale(-1, 1, 1);
+        
+        const panoramaMaterial = new THREE.MeshBasicMaterial({
+            map: textureLoader.load(PANORAMA_IMAGE_URL, undefined, undefined, () => {
+                console.warn("全景圖載入失敗，使用預設黑色背景。");
+            }),
+            color: 0x444444
+        });
+        const panoramaMesh = new THREE.Mesh(panoramaGeo, panoramaMaterial);
+        scene.add(panoramaMesh);
+
+        const particleCount = 50000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const particleData = [];
+
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            grad.addColorStop(0.1, 'rgba(255, 230, 150, 1)');
+            grad.addColorStop(0.4, 'rgba(255, 120, 30, 0.5)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad; ctx.fillRect(0,0,64,64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const fireflyColors = [0xffcc44, 0xffee88, 0xff9922, 0xffffaa];
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 1200;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 1200;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 1200;
+
+            let isPreLit = Math.random() < 0.4;
+            if (isPreLit) {
+                let randomColor = fireflyColors[Math.floor(Math.random() * fireflyColors.length)];
+                let c = new THREE.Color(randomColor);
+                colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+                sizes[i] = Math.random() * 8 + 4;
+            } else {
+                colors[i * 3] = 0.15 + Math.random() * 0.05;
+                colors[i * 3 + 1] = 0.15 + Math.random() * 0.05;
+                colors[i * 3 + 2] = 0.2 + Math.random() * 0.1;
+                sizes[i] = Math.random() * 2 + 1;
+            }
+
+            particleData.push({
+                velocity: isPreLit
+                    ? new THREE.Vector3((Math.random()-0.5)*0.5, Math.random()*0.8 + 0.2, (Math.random()-0.5)*0.5)
+                    : new THREE.Vector3((Math.random()-0.5)*0.1, -Math.random()*0.5 - 0.1, (Math.random()-0.5)*0.1),
+                isAwake: isPreLit,
+                targetColor: new THREE.Color(isPreLit ? fireflyColors[Math.floor(Math.random() * fireflyColors.length)] : 0x000000),
+                currentColor: new THREE.Color(colors[i*3], colors[i*3+1], colors[i*3+2]),
+                baseSize: isPreLit ? sizes[i] : (sizes[i] * 5),
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.PointsMaterial({
+            size: 3.5, map: createGlowTexture(), vertexColors: true,
+            transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        // 觸控與拖曳狀態變數
+        let isDragging = false;
+        let pointerDownX = 0, pointerDownY = 0;
+        let pointerDownTime = 0;
+        let lon = 0, lat = 0;
+        let savedLon = 0, savedLat = 0;
+        let lastInteractionTime = 0; // 防震抖機制
+
+        function tryTriggerTap(clientX, clientY) {
+            const now = Date.now();
+            if (now - lastInteractionTime < 500) return; // 500ms 內防重複觸發
             
+            if (isGameStarted && !isPaused && !isStoryActive && !isEnding) {
+                // 強制喚醒 AudioContext（防止 iOS 行動端音效靜音）
+                if (isAudioReady && typeof Tone !== 'undefined' && Tone.context && Tone.context.state !== 'running') {
+                    Tone.context.resume();
+                }
+
+                lastInteractionTime = now;
+                handleTapInteraction(clientX, clientY);
+            }
+        }
+
+        window.addEventListener('pointerdown', (e) => {
+            if (!isGameStarted || isPaused || isStoryActive || isEnding) return;
+            
+            isDragging = true;
+            pointerDownX = e.clientX;
+            pointerDownY = e.clientY;
+            pointerDownTime = Date.now();
+            savedLon = lon;
+            savedLat = lat;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (isDragging) {
+                lon = savedLon - (e.clientX - pointerDownX) * 0.15;
+                lat = savedLat + (e.clientY - pointerDownY) * 0.15;
+            }
+        });
+
+        window.addEventListener('pointerup', (e) => {
+            isDragging = false; 
+            const dx = e.clientX - pointerDownX;
+            const dy = e.clientY - pointerDownY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const timeElapsed = Date.now() - pointerDownTime;
+
+            const isTap = (timeElapsed < 500 && distance < 40) || (distance < 15);
+            if (isTap) tryTriggerTap(e.clientX, e.clientY);
+        });
+
+        // 攔截 iOS 特別縮放產生的 Click 穿透
+        window.addEventListener('click', (e) => {
+            if (e.target.closest('#init-screen') || e.target.closest('#pause-screen')) return;
+
+            const dx = e.clientX - pointerDownX;
+            const dy = e.clientY - pointerDownY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 40) {
+                tryTriggerTap(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('pointerleave', () => { isDragging = false; });
+        window.addEventListener('pointercancel', () => { isDragging = false; });
+
+        document.getElementById('init-screen').addEventListener('click', async () => {
+            await initAudio();
+            const initScreen = document.getElementById('init-screen');
+            initScreen.style.opacity = '0';
             setTimeout(() => {
-                uiLayer.style.opacity = '1';
-            }, 1000);
+                initScreen.style.display = 'none';
+                document.getElementById('hint-text').classList.remove('hidden-hint');
+                isGameStarted = true; // 正式解鎖遊戲控制
+            }, 2000);
+        });
 
-            startFearFlicker();
+        const raycaster = new THREE.Raycaster();
+        raycaster.params.Points.threshold = 150;
+        let typeWriterTimer;
+
+        function handleTapInteraction(clientX, clientY) {
+            document.getElementById('hint-text').classList.add('hidden-hint');
+
+            let mouse3D = new THREE.Vector2();
+            mouse3D.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse3D.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse3D, camera);
+            const intersects = raycaster.intersectObject(particles);
+
+            let hitPoint = new THREE.Vector3();
+            if (intersects.length > 0) {
+                hitPoint.copy(intersects[0].point);
+            } else {
+                camera.getWorldDirection(hitPoint);
+                hitPoint.multiplyScalar(400 + Math.random()*200).add(camera.position);
+            }
+
+            currentFov = 95;
+            targetFov = 70;
+
+            let awakenCount = 0;
+            let burstAmount = 3000 + Math.random() * 3000;
+            
+            for(let i=0; i<particleCount; i++) {
+                if(!particleData[i].isAwake) {
+                    let px = positions[i*3], py = positions[i*3+1], pz = positions[i*3+2];
+                    let distSq = (px-hitPoint.x)**2 + (py-hitPoint.y)**2 + (pz-hitPoint.z)**2;
+                    
+                    if(distSq < 400000 || awakenCount < 500) {
+                        awakenParticle(i);
+                        awakenCount++;
+                        if(awakenCount >= burstAmount) break;
+                    }
+                }
+            }
+
+            createRipple(clientX, clientY);
+
+            safeAudio(() => {
+                if(chimeSynth) chimeSynth.triggerAttackRelease(chimeNotes[currentStoryIndex % chimeNotes.length], "1n");
+                if(boomSynth) boomSynth.triggerAttackRelease("C1", "1n");
+            });
+            
+            if(navigator.vibrate) navigator.vibrate([100, 30, 100, 30, 150]);
+
+            if (currentStoryIndex < warMessages.length) {
+                openStory(warMessages[currentStoryIndex]);
+                currentStoryIndex++;
+            }
         }
 
-        // 自動隱藏 UI (已修復拼字錯誤 return)
-        let uiTimer;
-        const ui = document.getElementById('ui-layer');
-        window.addEventListener('mousedown', (e) => {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                ui.style.opacity = '0.08';
-                clearTimeout(uiTimer);
-            }
-        });
-        window.addEventListener('mouseup', (e) => {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-            }
-        });
+        function createRipple(x, y) {
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            document.body.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 2500);
+        }
 
-        window.addEventListener('touchstart', (e) => {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                ui.style.opacity = '0.08';
-                clearTimeout(uiTimer);
-            }
-        });
-        window.addEventListener('touchend', (e) => {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-            }
-        });
+        const chimeNotes = ["C5", "E5", "G5", "B5", "D6"];
 
-        function startFearFlicker() {
-            const flicker = document.getElementById('flicker-layer');
-            const scene = document.querySelector('a-scene');
-            setInterval(() => {
-                if (Math.random() > 0.65) {
-                    flicker.classList.add('flicker-active');
-                    scene.classList.add('shake-active');
-                    setTimeout(() => {
-                        flicker.classList.remove('flicker-active');
-                        scene.classList.remove('shake-active');
-                    }, 500);
+        function awakenParticle(idx) {
+            const p = particleData[idx];
+            p.isAwake = true;
+            p.targetColor.setHex(fireflyColors[Math.floor(Math.random() * fireflyColors.length)]);
+            sizes[idx] = p.baseSize * (Math.random() * 3.5 + 1.5);
+            p.velocity.set(
+                (Math.random()-0.5) * 10,
+                Math.random() * 8 + 2,
+                (Math.random()-0.5) * 10
+            );
+            geometry.attributes.size.needsUpdate = true;
+        }
+
+        const storyOverlay = document.getElementById('story-overlay');
+        const actionEl = document.getElementById('action-text');
+        const quoteEl = document.getElementById('quote-text');
+        const darknessOverlay = document.getElementById('darkness-overlay');
+
+        function openStory(messageData) {
+            isStoryActive = true;
+            clearTimeout(typeWriterTimer);
+            
+            actionEl.innerHTML = messageData.action.replace(/\n/g, '<br>');
+            actionEl.classList.remove('show');
+            quoteEl.innerHTML = '';
+            quoteEl.classList.add('typewriter-cursor');
+            storyOverlay.classList.add('active');
+
+            safeAudio(() => {
+                if(droneSynth) droneSynth.volume.rampTo(-25, 2);
+            });
+
+            setTimeout(() => { actionEl.classList.add('show'); }, 1500);
+
+            setTimeout(() => {
+                let i = 0;
+                function typeWriter() {
+                    // 【精準修正點】使用狀態變數 isPaused 取代不穩定的 style.display 樣式檢查
+                    if (isPaused) {
+                        typeWriterTimer = setTimeout(typeWriter, 100);
+                        return;
+                    }
+
+                    if (i < messageData.quote.length) {
+                        let char = messageData.quote.charAt(i);
+                        
+                        if (char === '\n') {
+                            quoteEl.innerHTML += '<br>';
+                        } else {
+                            quoteEl.innerHTML += char;
+                        }
+                        
+                        if (char.trim() !== '' && char !== '\n' && !['，', '。'].includes(char)) {
+                            if(navigator.vibrate) navigator.vibrate(5);
+                            safeAudio(() => {
+                                if(typeNoise) typeNoise.triggerAttackRelease("32n");
+                            });
+                        }
+                        
+                        i++;
+                        let delay = (['，', '。', '？', '！', '...'].includes(char)) ? 450 : Math.random() * 60 + 40;
+                        typeWriterTimer = setTimeout(typeWriter, delay);
+                    } else {
+                        quoteEl.classList.remove('typewriter-cursor');
+                        setTimeout(closeStory, 3500);
+                    }
                 }
+                typeWriter();
+            }, 3500);
+        }
+
+        function closeStory() {
+            storyOverlay.classList.remove('active');
+            let progress = currentStoryIndex / warMessages.length;
+            
+            darknessOverlay.style.opacity = 1 - progress;
+            let colorIntensity = Math.floor(68 + (progress * 187));
+            let colorHex = (colorIntensity << 16) | (colorIntensity << 8) | colorIntensity;
+            panoramaMaterial.color.setHex(colorHex);
+
+            safeAudio(() => {
+                if(droneSynth) {
+                    droneSynth.volume.rampTo(-18, 3);
+                    droneSynth.frequency.rampTo(100 + progress * 100, 3);
+                }
+                if(hopePad) hopePad.volume.rampTo(-20 + (progress * 10), 4);
+                if(bgFilter) bgFilter.frequency.rampTo(300 + (progress * 800), 2);
+            });
+
+            setTimeout(() => {
+                isStoryActive = false;
+                if (currentStoryIndex >= warMessages.length) {
+                    triggerEnding();
+                }
+            }, 1500);
+        }
+
+        function triggerEnding() {
+            isEnding = true;
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = particleData[i];
+                if(!p.isAwake) {
+                    p.isAwake = true;
+                    p.targetColor.setHex(fireflyColors[Math.floor(Math.random() * fireflyColors.length)]);
+                    p.velocity.set((Math.random()-0.5)*2.5, Math.random()*5 + 2, (Math.random()-0.5)*2.5);
+                    sizes[i] = p.baseSize * (Math.random() * 2 + 1);
+                }
+            }
+            geometry.attributes.size.needsUpdate = true;
+            
+            darknessOverlay.style.opacity = '0';
+            panoramaMaterial.color.setHex(0xffffff);
+
+            safeAudio(() => {
+                if(droneSynth) droneSynth.volume.rampTo(-Infinity, 5);
+                if(bgNoise) bgNoise.volume.rampTo(-Infinity, 5);
+                if(hopePad) {
+                    hopePad.volume.rampTo(-5, 3);
+                    hopePad.triggerAttack(["C4", "E4", "G4", "B4"], "+1");
+                }
+            });
+
+            if(navigator.vibrate) navigator.vibrate([100, 50, 150, 50, 200, 100, 300, 100, 500, 200, 800]);
+
+            setTimeout(() => {
+                document.getElementById('final-container').style.opacity = '1';
+                
+                // 新增：顯示結局文字後，等待 5 秒跳轉回首頁 (index.html)
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 5000);
+                
             }, 6000);
         }
 
-        // 紀錄目前正在嘗試解鎖的章節
-        let pendingChapter = null;
-
-        function executeChapter(num) {
-            openPasswordModal(num);
-        }
-
-        function openPasswordModal(num) {
-            pendingChapter = num;
-            const modal = document.getElementById('password-modal');
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            document.getElementById('chapter-password').value = '';
-            document.getElementById('pwd-error').classList.add('opacity-0');
-            setTimeout(() => document.getElementById('chapter-password').focus(), 100);
-        }
-
-        function closePasswordModal() {
-            const modal = document.getElementById('password-modal');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            pendingChapter = null;
-            ui.style.opacity = '1'; 
-        }
-
-        function checkPassword() {
-            const pwd = document.getElementById('chapter-password').value;
-            let isCorrect = false;
-
-            // 判斷四個章節對應的密碼
-            if (pendingChapter === 1 && pwd === '12') isCorrect = true;
-            else if (pendingChapter === 2 && pwd === '11') isCorrect = true;
-            else if (pendingChapter === 3 && pwd === '13') isCorrect = true;
-            else if (pendingChapter === 4 && pwd === '14') isCorrect = true;
-
-            if (isCorrect) {
-                let unlockedChapter = pendingChapter;
-                closePasswordModal();
-                proceedToChapter(unlockedChapter);
-            } else {
-                const errorEl = document.getElementById('pwd-error');
-                errorEl.classList.remove('opacity-0');
-                document.getElementById('chapter-password').value = '';
-                
-                const scene = document.querySelector('a-scene');
-                if (scene) {
-                    scene.classList.add('shake-active');
-                    setTimeout(() => scene.classList.remove('shake-active'), 500);
-                }
-            }
-        }
-
-        document.getElementById('chapter-password').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                checkPassword();
-            }
-        });
-
-        // 資訊視窗邏輯
-        function showInfo(type) {
-            const modal = document.getElementById('info-modal');
-            const title = document.getElementById('info-title');
-            const content = document.getElementById('info-content');
-
-            if (type === 'concept') {
-                title.innerText = '劇本概念';
-                content.innerHTML = '《煙霧中長大的孩子》探討在戰火與防空洞中成長的童年。<br><br>我們試圖以孩子的視角，將殘酷的戰爭轉化為「躲貓貓」、「惡魔的翅膀」與「天空的禮物」等隱喻。在封閉且充滿恐懼的地下室裡，那些未能送達的愛與對光明的渴望，最終化作漫天星火，照亮了廢墟與黑夜。';
-            } else if (type === 'team') {
-                title.innerText = '製作團隊';
-                content.innerHTML = '<div class="text-center">製作與程式開發<br><span class="text-gray-200">煙霧專案團隊</span><br><br>視覺與美術設計<br><span class="text-gray-200">視覺設計團隊</span><br><br>音效與配樂<br><span class="text-gray-200">聲音工程團隊</span><br><br><span class="text-xs text-stone-500 mt-4 block">特別感謝所有為此專案提供協助的朋友。</span></div>';
-            }
-
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            ui.style.opacity = '0.08';
-        }
-
-        function closeInfo() {
-            const modal = document.getElementById('info-modal');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            ui.style.opacity = '1';
-        }
-
-        function proceedToChapter(num) {
-            document.getElementById('theater-curtain').style.opacity = '1';
-            setTimeout(() => window.location.href = `part${num}.html`, 2000);
-        }
-
-        // ==========================================
-        //  超寫實 Canvas 火焰、火星與灰燼特效
-        // ==========================================
-        const canvas = document.getElementById('fire-canvas');
-        const ctx = canvas.getContext('2d');
-        
-        let particles = [];      
-        let flameParticles = []; 
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        class AshAndSpark {
-            constructor() { this.reset(true); }
-            
-            reset(init = false) {
-                this.type = Math.random() > 0.65 ? 'spark' : 'ash';
-                this.x = Math.random() * canvas.width;
-                this.y = init ? Math.random() * canvas.height : (this.type === 'spark' ? canvas.height + 20 : -20);
-                this.size = Math.random() * 2 + 0.5;
-                this.speedY = this.type === 'spark' ? -(Math.random() * 2 + 0.8) : Math.random() * 0.6 + 0.2;
-                this.speedX = (Math.random() - 0.5) * 0.4;
-                this.opacity = Math.random() * 0.6 + 0.2;
-                this.wobbleSpeed = Math.random() * 0.02 + 0.01;
-                this.wobbleValue = Math.random() * Math.PI;
-            }
-
-            update() {
-                this.y += this.speedY;
-                this.x += this.speedX + Math.sin(this.wobbleValue) * 0.2;
-                this.wobbleValue += this.wobbleSpeed;
-
-                if (this.y < -20 || this.y > canvas.height + 20 || this.x < -10 || this.x > canvas.width + 10) {
-                    this.reset(false);
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = this.type === 'spark' ? `rgba(255, 120, 30, ${this.opacity})` : `rgba(70, 70, 70, ${this.opacity})`;
-                ctx.shadowBlur = this.type === 'spark' ? 6 : 0;
-                ctx.shadowColor = 'rgba(255, 80, 0, 0.5)';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0; 
-            }
-        }
-
-        class FlameParticle {
-            constructor() { this.reset(); this.y = canvas.height + Math.random() * 100; }
-
-            reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = canvas.height + 20 + Math.random() * 30;
-                this.size = Math.random() * 50 + 20; 
-                this.speedY = -(Math.random() * 3 + 1); 
-                this.speedX = (Math.random() - 0.5) * 1.5;
-                this.life = 1.0;
-                this.decay = Math.random() * 0.015 + 0.008; 
-                this.heat = Math.random() > 0.4 ? 'orange' : 'yellow';
-            }
-
-            update() {
-                this.y += this.speedY;
-                this.x += this.speedX + Math.sin(this.life * 8) * 0.8;
-                this.life -= this.decay;
-                this.size *= 0.95; 
-
-                if (this.life <= 0 || this.size <= 1) {
-                    this.reset();
-                }
-            }
-
-            draw() {
-                const alpha = this.life * 0.5;
-                let r = 255, g = 0, b = 0;
-
-                if (this.heat === 'yellow') {
-                    g = Math.floor(190 * this.life + 60);
-                } else {
-                    g = Math.floor(110 * this.life + 20);
-                }
-
-                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
-                grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
-                grad.addColorStop(0.3, `rgba(${r}, ${g - 30 > 0 ? g - 30 : 0}, 0, ${alpha * 0.7})`);
-                grad.addColorStop(1, `rgba(50, 0, 0, 0)`);
-
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        function initCanvas() {
-            particles = [];
-            flameParticles = [];
-            for (let i = 0; i < 450; i++) {
-                particles.push(new AshAndSpark());
-            }
-            for (let i = 0; i < 180; i++) {
-                flameParticles.push(new FlameParticle());
-            }
-        }
+        const clock = new THREE.Clock();
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.globalCompositeOperation = 'lighter';
-            flameParticles.forEach(p => { p.update(); p.draw(); });
-
-            ctx.globalCompositeOperation = 'source-over';
-            particles.forEach(p => { p.update(); p.draw(); });
-
             requestAnimationFrame(animate);
+
+            if (currentFov !== targetFov) {
+                currentFov += (targetFov - currentFov) * 0.05;
+                camera.fov = currentFov;
+                camera.updateProjectionMatrix();
+            }
+
+            const time = clock.getElapsedTime();
+            let swayX = Math.sin(time * 0.5) * 5;
+            let swayY = Math.cos(time * 0.3) * 5;
+
+            if (!isDragging && !isStoryActive) {
+                lon += 0.04;
+            }
+
+            lat = Math.max(-85, Math.min(85, lat));
+            const phi = THREE.MathUtils.degToRad(90 - lat);
+            const theta = THREE.MathUtils.degToRad(lon);
+            
+            camera.lookAt(
+                500 * Math.sin(phi) * Math.cos(theta) + swayX,
+                500 * Math.cos(phi) + swayY,
+                500 * Math.sin(phi) * Math.sin(theta)
+            );
+
+            const posAttr = geometry.attributes.position;
+            const colAttr = geometry.attributes.color;
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = particleData[i];
+
+                positions[i * 3] += p.velocity.x;
+                positions[i * 3 + 1] += p.velocity.y;
+                positions[i * 3 + 2] += p.velocity.z;
+
+                if (positions[i * 3 + 1] < -600 && !p.isAwake) {
+                    positions[i * 3 + 1] = 600;
+                } else if (positions[i * 3 + 1] > 600 && p.isAwake) {
+                    positions[i * 3 + 1] = -600;
+                }
+
+                if (p.isAwake) {
+                    if (isEnding) {
+                        const radius = Math.sqrt(positions[i*3]*positions[i*3] + positions[i*3+2]*positions[i*3+2]);
+                        const angle = Math.atan2(positions[i*3+2], positions[i*3]);
+                        const newAngle = angle + (0.015 * (200/Math.max(radius, 10)));
+                        positions[i * 3] = Math.cos(newAngle) * radius;
+                        positions[i * 3 + 2] = Math.sin(newAngle) * radius;
+                        positions[i * 3 + 1] += Math.random() * 1.2;
+                    } else {
+                        p.velocity.x *= 0.94;
+                        p.velocity.z *= 0.94;
+                        if (p.velocity.y > 0.4) p.velocity.y *= 0.95;
+                        positions[i * 3] += Math.sin(time * 1.5 + i) * 0.6;
+                    }
+
+                    p.currentColor.lerp(p.targetColor, 0.08);
+                    let flicker = 0.5 + Math.sin(time * 6 + p.phase) * 0.5;
+                    colAttr.setXYZ(i, p.currentColor.r * flicker, p.currentColor.g * flicker, p.currentColor.b * flicker);
+                }
+            }
+
+            posAttr.needsUpdate = true;
+            colAttr.needsUpdate = true;
+            particles.rotation.y = time * 0.01;
+            renderer.render(scene, camera);
         }
 
-        initCanvas();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
         animate();
     </script>
 </body>
