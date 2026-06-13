@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>螢火蟲的灰燼</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400;600&display=swap');
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100vw; height: 100dvh;
+            background-color: #000; overflow: hidden;
+            font-family: 'Noto Serif TC', serif;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            touch-action: none; overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .grain {
+            position: fixed; inset: 0;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtP38+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAJklEQVQ4y2NgGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFAwAAwB7AQABK5Sj1AAAAABJRU5ErkJggg==');
+            opacity: 0.12; pointer-events: none; z-index: 999;
+            animation: grainShift 0.4s steps(2) infinite;
+        }
+        @keyframes grainShift { 0% { background-position: 0 0; } 100% { background-position: 10px 10px; } }
+
+        #init-screen {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 2s ease-in-out; cursor: pointer;
+        }
+        .init-text {
+            color: rgba(255, 255, 255, 0.9); font-size: clamp(1.2rem, 5vw, 1.5rem);
+            letter-spacing: 0.5em; font-weight: 300; margin-left: 0.5em;
+            animation: pulse-slow 4s infinite; text-shadow: 0 0 20px rgba(255,255,255,0.6);
+            text-align: center; white-space: nowrap;
+        }
+        .init-subtext {
+            color: rgba(255, 255, 255, 0.5); font-size: 0.8rem; letter-spacing: 0.2em; margin-top: 4vh;
+            text-align: center;
+        }
+
+        /* 👇 新增：跳回 App 時的暫停解鎖畫面 */
+        #pause-screen {
+            position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: opacity 0.5s ease;
+        }
+        .pause-text {
+            color: rgba(255, 255, 255, 0.7); font-size: clamp(0.9rem, 3.5vw, 1.2rem);
+            letter-spacing: 0.4em; font-weight: 300; text-align: center; margin-left: 0.4em;
+            animation: pulse-slow 3s infinite; text-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+
+        #webgl-container { position: absolute; inset: 0; z-index: 1; }
+
+        #darkness-overlay {
+            position: absolute; inset: 0; pointer-events: none; z-index: 2;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%);
+            transition: opacity 4s ease-in-out;
+        }
+
+        #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+        .instruction {
+            position: absolute; bottom: 8%; color: rgba(255, 255, 255, 0.8);
+            font-size: clamp(0.85rem, 3.5vw, 1rem); letter-spacing: 0.4em;
+            animation: pulse-slow 4s infinite; text-align: center;
+            transition: opacity 2s ease; text-shadow: 0 0 15px rgba(0,0,0,1);
+            width: 85vw; overflow-wrap: break-word; white-space: normal;
+        }
+        .hidden-hint { opacity: 0; pointer-events: none; }
+        @keyframes pulse-slow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        #story-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background-color: rgba(0, 0, 0, 0.88);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 1.5s ease;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        #story-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .story-text-container {
+            width: 85vw;
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        
+        #action-text {
+            color: #999; font-size: clamp(0.9rem, 4vw, 1.1rem); letter-spacing: 0.2em; line-height: 2;
+            margin-bottom: 5vh; opacity: 0; transition: opacity 2s ease, filter 2s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3vh;
+            font-weight: 300; filter: blur(5px);
+            display: block; width: 100%; text-align: center;
+            word-break: normal; overflow-wrap: break-word; white-space: normal;
+        }
+        #action-text.show { opacity: 1; filter: blur(0px); }
+        
+        #quote-text {
+            color: #ffcc66; font-size: clamp(1.1rem, 5.5vw, 1.6rem); letter-spacing: 0.15em; line-height: 2.2;
+            text-shadow: 0 0 25px rgba(255, 204, 102, 0.4); min-height: 25vh; font-weight: 300;
+            display: block; width: 100%; text-align: center;
+            word-break: normal; overflow-wrap: break-word; white-space: normal;
+        }
+        
+        .typewriter-cursor::after {
+            content: '|'; color: #ffcc66; animation: blink 1s step-end infinite; margin-left: 2px; opacity: 0.8;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #final-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; opacity: 0; transition: opacity 6s ease-in; z-index: 15; pointer-events: none;
+            width: 90vw; max-width: 800px; padding: 0 2vw; box-sizing: border-box;
+        }
+        #final-text {
+            font-size: clamp(1.8rem, 8vw, 4rem); font-weight: 300; letter-spacing: 0.3em;
+            color: #fff; text-shadow: 0 0 50px rgba(255, 200, 100, 1), 0 0 100px rgba(255, 100, 50, 0.6);
+            margin-bottom: 4vh; margin-left: 0.15em;
+            display: block; overflow-wrap: break-word; white-space: normal; line-height: 1.5;
+        }
+        #final-subtext {
+            font-size: clamp(0.9rem, 4vw, 1.4rem); color: rgba(255, 220, 150, 0.95);
+            letter-spacing: 0.3em; font-weight: 200; margin-left: 0.15em; text-shadow: 0 0 15px #000;
+            display: block; overflow-wrap: break-word; white-space: normal; line-height: 2;
+        }
+
+        .ripple {
+            position: absolute; border: 2px solid rgba(255, 220, 100, 0.9);
+            border-radius: 50%; transform: translate(-50%, -50%) scale(0);
+            pointer-events: none; z-index: 5;
+            animation: ripple-anim 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+        @keyframes ripple-anim {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; box-shadow: 0 0 80px rgba(255, 180, 50, 1) inset; border-width: 6px; }
+            50% { opacity: 0.6; border-width: 2px; }
+            100% { transform: translate(-50%, -50%) scale(15); opacity: 0; box-shadow: 0 0 0px rgba(255, 150, 50, 0) inset; border-width: 0px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="grain"></div>
+    <div id="init-screen">
+        <div class="init-text">輕觸畫面，進入廢墟</div>
+        <div class="init-subtext">強烈建議佩戴耳機，感受極致沈浸</div>
+    </div>
+    
+    <div id="pause-screen">
+        <div class="pause-text">畫面已暫停 · 輕觸以繼續</div>
+    </div>
+
+    <div id="darkness-overlay"></div>
+    <div id="webgl-container"></div>
+    
+    <div id="ui-layer">
+        <div id="hint-text" class="instruction hidden-hint">滑動環視四周，點擊飛灰釋放思念</div>
+        <div id="final-container">
+            <div id="final-text">一切都會變得更好</div>
+            <div id="final-subtext">那些未曾送達的愛，<br>終將化作漫天星火照亮黑夜</div>
+        </div>
+    </div>
+
+    <div id="story-overlay">
+        <div class="story-text-container">
+            <p id="action-text"></p>
+            <div id="quote-text"></div>
+        </div>
+    </div>
+
+    <script>
+        const PANORAMA_IMAGE_URL = 'ruin.jpg';
+        
+        let isAudioReady = false;
+        let droneSynth, hopePad, chimeSynth, typeNoise, bgNoise, bgFilter, boomSynth;
+
+        function safeAudio(action) {
+            if (!isAudioReady || typeof Tone === 'undefined' || !Tone.context) return;
+            try {
+                if (Tone.context.state === 'running') {
+                    action();
+                }
+            } catch (error) {
+                console.warn("已攔截 iOS 音效錯誤", error);
+            }
+        }
+
+        // ==========================================
+        // 【終極解法】利用真實點擊解鎖 iOS 聲音引擎
+        // ==========================================
+        window.showPauseScreen = function() {
+            // 如果還在最一開始的初始畫面，就不用暫停
+            if (document.getElementById('init-screen').style.display !== 'none') return;
+            
+            document.getElementById('pause-screen').style.display = 'flex';
+            if (isAudioReady) Tone.Destination.mute = true;
+        };
+
+        // 玩家真實點擊暫停畫面時，保證 100% 成功喚醒 Tone.js
+        document.getElementById('pause-screen').addEventListener('click', async () => {
+            if (isAudioReady && typeof Tone !== 'undefined' && Tone.context) {
+                if (Tone.context.state !== 'running') {
+                    await Tone.context.resume(); // 在真實點擊下，iOS 絕對不會阻擋這行
+                }
+                Tone.Destination.mute = false;
+            }
+            document.getElementById('pause-screen').style.display = 'none';
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                isDragging = false;
+                if (isAudioReady) Tone.Destination.mute = true;
+            } else {
+                // 網頁原生的返回也會呼叫暫停畫面
+                showPauseScreen();
+            }
+        });
+
+        async function initAudio() {
+            if (isAudioReady) return;
+            try {
+                await Tone.start();
+                bgFilter = new Tone.Filter(300, "lowpass").toDestination();
+                bgNoise = new Tone.Noise("pink").connect(bgFilter);
+                bgNoise.volume.value = -12;
+
+                droneSynth = new Tone.FMSynth({
+                    harmonicity: 0.5, modulationIndex: 5,
+                    oscillator: { type: "sine" }, modulation: { type: "triangle" },
+                    envelope: { attack: 4, decay: 2, sustain: 1, release: 5 }
+                }).toDestination();
+                droneSynth.volume.value = -15;
+
+                const reverb = new Tone.Reverb({ decay: 10, wet: 0.7 }).toDestination();
+                
+                hopePad = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "sine" }, envelope: { attack: 3, decay: 2, sustain: 0.8, release: 5 }
+                }).connect(reverb);
+                hopePad.volume.value = -Infinity;
+
+                chimeSynth = new Tone.PolySynth(Tone.MetalSynth, {
+                    frequency: 250, envelope: { attack: 0.01, decay: 2, release: 2 },
+                    harmonicity: 4.5, modulationIndex: 20, resonance: 4000, octaves: 1.5
+                }).connect(reverb);
+                chimeSynth.volume.value = -12;
+
+                boomSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.08, octaves: 6, oscillator: { type: "sine" },
+                    envelope: { attack: 0.001, decay: 2.5, sustain: 0, release: 2 }
+                }).connect(reverb);
+                boomSynth.volume.value = -5;
+
+                typeNoise = new Tone.NoiseSynth({
+                    noise: { type: 'brown' }, envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.05 }
+                }).toDestination();
+                typeNoise.volume.value = -22;
+
+                isAudioReady = true;
+                bgNoise.start();
+                droneSynth.triggerAttack("C2");
+                hopePad.triggerAttack(["C3", "G3"]);
+            } catch (error) { console.error("Audio init failed:", error); }
+        }
+
+        let isStoryActive = false;
+        let isEnding = false;
+        let currentStoryIndex = 0;
+
+        const warMessages = [
+            { action: "你撥開瓦礫，觸碰了一面碎裂的螢幕。\n微弱的亮光，宛如它不甘的脈搏。", quote: "「電量剩 2%。\n如果我沒能出去，請幫我照顧好媽媽。」" },
+            { action: "灰燼掩埋著一個失去溫度的鐵盒，\n裡頭正反覆重播著最後的牽掛。", quote: "「地下室的空氣越來越稀薄了。\n小寶，爸爸永遠愛你，你要勇敢。」" },
+            { action: "你拾起一張被戰火燒毀一半的紙條，\n上面的字跡早已因淚水而暈染開來。", quote: "「外面終於安靜下來了，但我不敢出去。\n好冷。」" },
+            { action: "在沒有訊號的荒原裡，\n一個紅色驚嘆號將最後的愛意，永遠困在了發件匣。", quote: "「他們說救援不會來了。\n我們把最後的水留給了孩子。」" },
+            { action: "在最深最深的黑夜中，\n一卷底片記錄下了他們對黎明最後的渴望。", quote: "「天亮了。\n這可能是我最後一次看到日出...」" }
+        ];
+
+        const container3D = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        let currentFov = 70;
+        let targetFov = 70;
+        const camera = new THREE.PerspectiveCamera(currentFov, window.innerWidth / window.innerHeight, 0.1, 1500);
+        
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container3D.appendChild(renderer.domElement);
+
+        const textureLoader = new THREE.TextureLoader();
+        const panoramaGeo = new THREE.SphereGeometry(800, 60, 40);
+        panoramaGeo.scale(-1, 1, 1);
+        
+        const panoramaMaterial = new THREE.MeshBasicMaterial({
+            map: textureLoader.load(PANORAMA_IMAGE_URL),
+            color: 0x444444
+        });
+        const panoramaMesh = new THREE.Mesh(panoramaGeo, panoramaMaterial);
+        scene.add(panoramaMesh);
+
+        const particleCount = 50000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const particleData = [];
+
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            grad.addColorStop(0.1, 'rgba(255, 230, 150, 1)');
+            grad.addColorStop(0.4, 'rgba(255, 120, 30, 0.5)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad; ctx.fillRect(0,0,64,64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const fireflyColors = [0xffcc44, 0xffee88, 0xff9922, 0xffffaa];
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 1200;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 1200;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 1200;
+
+            let isPreLit = Math.random() < 0.4;
+            if (isPreLit) {
+                let randomColor = fireflyColors[Math.floor(Math.random() * fireflyColors.length)];
+                let c = new THREE.Color(randomColor);
+                colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+                sizes[i] = Math.random() * 8 + 4;
+            } else {
+                colors[i * 3] = 0.15 + Math.random() * 0.05;
+                colors[i * 3 + 1] = 0.15 + Math.random() * 0.05;
+                colors[i * 3 + 2] = 0.2 + Math.random() * 0.1;
+                sizes[i] = Math.random() * 2 + 1;
+            }
+
+            particleData.push({
+                velocity: isPreLit
+                    ? new THREE.Vector3((Math.random()-0.5)*0.5, Math.random()*0.8 + 0.2, (Math.random()-0.5)*0.5)
+                    : new THREE.Vector3((Math.random()-0.5)*0.1, -Math.random()*0.5 - 0.1, (Math.random()-0.5)*0.1),
+                isAwake: isPreLit,
+                targetColor: new THREE.Color(isPreLit ? fireflyColors[Math.floor(Math.random() * fireflyColors.length)] : 0x000000),
+                currentColor: new THREE.Color(colors[i*3], colors[i*3+1], colors[i*3+2]),
+                baseSize: isPreLit ? sizes[i] : (sizes[i] * 5),
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.PointsMaterial({
+            size: 3.5, map: createGlowTexture(), vertexColors: true,
+            transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        let isDragging = false;
+        let dragDistance = 0;
+        let pointerDownX = 0, pointerDownY = 0;
+        let lon = 0, lat = 0;
+        let savedLon = 0, savedLat = 0;
+
+        container3D.addEventListener('pointerdown', (e) => {
+            if (document.getElementById('init-screen').style.display !== 'none' ||
+                document.getElementById('pause-screen').style.display !== 'none' ||
+                isStoryActive) return;
+            isDragging = true;
+            dragDistance = 0;
+            pointerDownX = e.clientX;
+            pointerDownY = e.clientY;
+            savedLon = lon;
+            savedLat = lat;
+        });
+
+        container3D.addEventListener('pointermove', (e) => {
+            if (isDragging) {
+                lon = savedLon - (e.clientX - pointerDownX) * 0.15;
+                lat = savedLat + (e.clientY - pointerDownY) * 0.15;
+                dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
+            }
+        });
+
+        container3D.addEventListener('pointerup', (e) => {
+            isDragging = false;
+            if (dragDistance < 15 && !isStoryActive && !isEnding &&
+                document.getElementById('init-screen').style.display === 'none' &&
+                document.getElementById('pause-screen').style.display === 'none') {
+                handleTapInteraction(e.clientX, e.clientY);
+            }
+        });
+
+        document.getElementById('init-screen').addEventListener('click', async () => {
+            await initAudio();
+            const initScreen = document.getElementById('init-screen');
+            initScreen.style.opacity = '0';
+            setTimeout(() => {
+                initScreen.style.display = 'none';
+                document.getElementById('hint-text').classList.remove('hidden-hint');
+            }, 2000);
+        });
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.params.Points.threshold = 150;
+        let typeWriterTimer;
+
+        function handleTapInteraction(clientX, clientY) {
+            document.getElementById('hint-text').classList.add('hidden-hint');
+
+            let mouse3D = new THREE.Vector2();
+            mouse3D.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse3D.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse3D, camera);
+            const intersects = raycaster.intersectObject(particles);
+
+            let hitPoint = new THREE.Vector3();
+            if (intersects.length > 0) {
+                hitPoint.copy(intersects[0].point);
+            } else {
+                camera.getWorldDirection(hitPoint);
+                hitPoint.multiplyScalar(400 + Math.random()*200).add(camera.position);
+            }
+
+            currentFov = 95;
+            targetFov = 70;
+
+            let awakenCount = 0;
+            let burstAmount = 3000 + Math.random() * 3000;
+            
+            for(let i=0; i<particleCount; i++) {
+                if(!particleData[i].isAwake) {
+                    let px = positions[i*3], py = positions[i*3+1], pz = positions[i*3+2];
+                    let distSq = (px-hitPoint.x)**2 + (py-hitPoint.y)**2 + (pz-hitPoint.z)**2;
+                    
+                    if(distSq < 400000 || awakenCount < 500) {
+                        awakenParticle(i);
+                        awakenCount++;
+                        if(awakenCount >= burstAmount) break;
+                    }
+                }
+            }
+
+            createRipple(clientX, clientY);
+
+            safeAudio(() => {
+                if(chimeSynth) chimeSynth.triggerAttackRelease(chimeNotes[currentStoryIndex % chimeNotes.length], "1n");
+                if(boomSynth) boomSynth.triggerAttackRelease("C1", "1n");
+            });
+            
+            if(navigator.vibrate) navigator.vibrate([100, 30, 100, 30, 150]);
+
+            if (currentStoryIndex < warMessages.length) {
+                openStory(warMessages[currentStoryIndex]);
+                currentStoryIndex++;
+            }
+        }
+
+        function createRipple(x, y) {
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            document.body.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 2500);
+        }
+
+        const chimeNotes = ["C5", "E5", "G5", "B5", "D6"];
+
+        function awakenParticle(idx) {
+            const p = particleData[idx];
+            p.isAwake = true;
+            p.targetColor.setHex(fireflyColors[Math.floor(Math.random() * fireflyColors.length)]);
+            sizes[idx] = p.baseSize * (Math.random() * 3.5 + 1.5);
+            p.velocity.set(
+                (Math.random()-0.5) * 10,
+                Math.random() * 8 + 2,
+                (Math.random()-0.5) * 10
+            );
+            geometry.attributes.size.needsUpdate = true;
+        }
+
+        const storyOverlay = document.getElementById('story-overlay');
+        const actionEl = document.getElementById('action-text');
+        const quoteEl = document.getElementById('quote-text');
+        const darknessOverlay = document.getElementById('darkness-overlay');
+
+        function openStory(messageData) {
+            isStoryActive = true;
+            clearTimeout(typeWriterTimer);
+            
+            actionEl.innerHTML = messageData.action.replace(/\n/g, '<br>');
+            actionEl.classList.remove('show');
+            quoteEl.innerHTML = '';
+            quoteEl.classList.add('typewriter-cursor');
+            storyOverlay.classList.add('active');
+
+            safeAudio(() => {
+                if(droneSynth) droneSynth.volume.rampTo(-25, 2);
+            });
+
+            setTimeout(() => { actionEl.classList.add('show'); }, 1500);
+
+            setTimeout(() => {
+                let i = 0;
+                function typeWriter() {
+                    // 如果中途暫停了，暫時卡住打字機不要繼續跑
+                    if (document.getElementById('pause-screen').style.display !== 'none') {
+                        typeWriterTimer = setTimeout(typeWriter, 100);
+                        return;
+                    }
+
+                    if (i < messageData.quote.length) {
+                        let char = messageData.quote.charAt(i);
+                        
+                        if (char === '\n') {
+                            quoteEl.innerHTML += '<br>';
+                        } else {
+                            quoteEl.innerHTML += char;
+                        }
+                        
+                        if (char.trim() !== '' && char !== '\n' && !['，', '。'].includes(char)) {
+                            if(navigator.vibrate) navigator.vibrate(5);
+                            safeAudio(() => {
+                                if(typeNoise) typeNoise.triggerAttackRelease("32n");
+                            });
+                        }
+                        
+                        i++;
+                        let delay = (['，', '。', '？', '！', '...'].includes(char)) ? 450 : Math.random() * 60 + 40;
+                        typeWriterTimer = setTimeout(typeWriter, delay);
+                    } else {
+                        quoteEl.classList.remove('typewriter-cursor');
+                        setTimeout(closeStory, 3500);
+                    }
+                }
+                typeWriter();
+            }, 3500);
+        }
+
+        function closeStory() {
+            storyOverlay.classList.remove('active');
+            let progress = currentStoryIndex / warMessages.length;
+            
+            darknessOverlay.style.opacity = 1 - progress;
+            let colorIntensity = Math.floor(68 + (progress * 187));
+            let colorHex = (colorIntensity << 16) | (colorIntensity << 8) | colorIntensity;
+            panoramaMaterial.color.setHex(colorHex);
+
+            safeAudio(() => {
+                if(droneSynth) {
+                    droneSynth.volume.rampTo(-18, 3);
+                    droneSynth.frequency.rampTo(100 + progress * 100, 3);
+                }
+                if(hopePad) hopePad.volume.rampTo(-20 + (progress * 10), 4);
+                if(bgFilter) bgFilter.frequency.rampTo(300 + (progress * 800), 2);
+            });
+
+            setTimeout(() => {
+                isStoryActive = false;
+                if (currentStoryIndex >= warMessages.length) {
+                    triggerEnding();
+                }
+            }, 1500);
+        }
+
+        function triggerEnding() {
+            isEnding = true;
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = particleData[i];
+                if(!p.isAwake) {
+                    p.isAwake = true;
+                    p.targetColor.setHex(fireflyColors[Math.floor(Math.random() * fireflyColors.length)]);
+                    p.velocity.set((Math.random()-0.5)*2.5, Math.random()*5 + 2, (Math.random()-0.5)*2.5);
+                    sizes[i] = p.baseSize * (Math.random() * 2 + 1);
+                }
+            }
+            geometry.attributes.size.needsUpdate = true;
+            
+            darknessOverlay.style.opacity = '0';
+            panoramaMaterial.color.setHex(0xffffff);
+
+            safeAudio(() => {
+                if(droneSynth) droneSynth.volume.rampTo(-Infinity, 5);
+                if(bgNoise) bgNoise.volume.rampTo(-Infinity, 5);
+                if(hopePad) {
+                    hopePad.volume.rampTo(-5, 3);
+                    hopePad.triggerAttack(["C4", "E4", "G4", "B4"], "+1");
+                }
+            });
+
+            if(navigator.vibrate) navigator.vibrate([100, 50, 150, 50, 200, 100, 300, 100, 500, 200, 800]);
+
+            setTimeout(() => {
+                document.getElementById('final-container').style.opacity = '1';
+            }, 6000);
+        }
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (currentFov !== targetFov) {
+                currentFov += (targetFov - currentFov) * 0.05;
+                camera.fov = currentFov;
+                camera.updateProjectionMatrix();
+            }
+
+            const time = clock.getElapsedTime();
+            let swayX = Math.sin(time * 0.5) * 5;
+            let swayY = Math.cos(time * 0.3) * 5;
+
+            if (!isDragging && !isStoryActive) {
+                lon += 0.04;
+            }
+
+            lat = Math.max(-85, Math.min(85, lat));
+            const phi = THREE.MathUtils.degToRad(90 - lat);
+            const theta = THREE.MathUtils.degToRad(lon);
+            
+            camera.lookAt(
+                500 * Math.sin(phi) * Math.cos(theta) + swayX,
+                500 * Math.cos(phi) + swayY,
+                500 * Math.sin(phi) * Math.sin(theta)
+            );
+
+            const posAttr = geometry.attributes.position;
+            const colAttr = geometry.attributes.color;
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = particleData[i];
+
+                positions[i * 3] += p.velocity.x;
+                positions[i * 3 + 1] += p.velocity.y;
+                positions[i * 3 + 2] += p.velocity.z;
+
+                if (positions[i * 3 + 1] < -600 && !p.isAwake) {
+                    positions[i * 3 + 1] = 600;
+                } else if (positions[i * 3 + 1] > 600 && p.isAwake) {
+                    positions[i * 3 + 1] = -600;
+                }
+
+                if (p.isAwake) {
+                    if (isEnding) {
+                        const radius = Math.sqrt(positions[i*3]*positions[i*3] + positions[i*3+2]*positions[i*3+2]);
+                        const angle = Math.atan2(positions[i*3+2], positions[i*3]);
+                        const newAngle = angle + (0.015 * (200/Math.max(radius, 10)));
+                        positions[i * 3] = Math.cos(newAngle) * radius;
+                        positions[i * 3 + 2] = Math.sin(newAngle) * radius;
+                        positions[i * 3 + 1] += Math.random() * 1.2;
+                    } else {
+                        p.velocity.x *= 0.94;
+                        p.velocity.z *= 0.94;
+                        if (p.velocity.y > 0.4) p.velocity.y *= 0.95;
+                        positions[i * 3] += Math.sin(time * 1.5 + i) * 0.6;
+                    }
+
+                    p.currentColor.lerp(p.targetColor, 0.08);
+                    let flicker = 0.5 + Math.sin(time * 6 + p.phase) * 0.5;
+                    colAttr.setXYZ(i, p.currentColor.r * flicker, p.currentColor.g * flicker, p.currentColor.b * flicker);
+                }
+            }
+
+            posAttr.needsUpdate = true;
+            colAttr.needsUpdate = true;
+            particles.rotation.y = time * 0.01;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
