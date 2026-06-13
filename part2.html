@@ -614,7 +614,7 @@
             }, 1500);
         }
 
-        function triggerEnding() {
+function triggerEnding() {
             isEnding = true;
 
             for (let i = 0; i < particleCount; i++) {
@@ -643,14 +643,26 @@
             if(navigator.vibrate) navigator.vibrate([100, 50, 150, 50, 200, 100, 300, 100, 500, 200, 800]);
 
             setTimeout(() => {
+                // 顯示結局文字
                 document.getElementById('final-container').style.opacity = '1';
                 
-                // 新增：顯示結局文字後，等待 5 秒跳轉回首頁 (index.html)
+                // 【步驟 1】：結局文字顯示後，讓玩家看 5 秒，接著觸發漸暗
                 setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 50000);
+                    const darkness = document.getElementById('darkness-overlay');
+                    
+                    darkness.style.transition = 'opacity 2.5s ease'; // 設定漸暗動畫維持 2.5 秒
+                    darkness.style.background = '#000';             // 把原本的陰影改成「純黑色」
+                    darkness.style.zIndex = '9999';                 // 把黑幕提到最上層（連文字也一起蓋住）
+                    darkness.style.opacity = '1';                   // 開始變黑
+                    
+                    // 【步驟 2】：等待 2.5 秒黑幕完全變全黑後，正式跳轉回首頁
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2500); // 這裡的時間（2500）要跟上面的 transition 時間（2.5s）一致
+                    
+                }, 5000); // 結局文字停留在畫面上的時間（5秒）
                 
-            }, 20000);
+            }, 6000);
         }
 
         const clock = new THREE.Clock();
