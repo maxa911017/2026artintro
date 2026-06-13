@@ -6,7 +6,7 @@
     <title>《煙霧中長大的孩子:防空洞裡學會的事》</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=200;300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
     <!-- 載入正統 360 度環景引擎 A-Frame -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
@@ -127,32 +127,24 @@
     <!-- 真正的 3D 360度環景引擎 -->
     <a-scene id="experience-scene" embedded vr-mode-ui="enabled: false">
         <a-assets>
-            <!-- 360度全景圖資產 -->
             <img id="panorama" src="back.jpg" crossorigin="anonymous">
-            
-            <!-- 將背景音樂放置在 A-Frame 資產管理器中，確保 3D 引擎能預加載並避開與 AudioContext 衝突 -->
             <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
         </a-assets>
         
-        <!-- 360度天空，支援滑鼠拖曳、手機滑動觀看上下左右 -->
         <a-sky src="#panorama" rotation="0 -90 0" 
                animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
                
         <a-entity camera look-controls="reverseMouseDrag: true"></a-entity>
     </a-scene>
 
-    <!-- 環境火光 -->
+    <!-- 環境火光與特效 -->
     <div class="fire-glow"></div>
-    
-    <!-- 動態火焰、火星與灰燼 Canvas (不會阻擋 360 度滑鼠拖曳) -->
     <canvas id="fire-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
-    
-    <!-- 氛圍濾鏡 -->
     <div class="vignette"></div>
     <div class="noise-overlay"></div>
     <div id="flicker-layer" class="flicker-overlay"></div>
 
-    <!-- 互動開場帷幕 (確保音樂能 100% 播放) -->
+    <!-- 互動開場帷幕 -->
     <div id="start-curtain" onclick="startExperience()">
         <div class="text-center px-6">
             <p class="text-xs tracking-[0.4em] text-red-700 font-light mb-4 uppercase">Shellproof Shelter Memories</p>
@@ -170,6 +162,12 @@
             <h2 class="text-xs md:text-sm text-gray-400 tracking-[0.3em] font-light mt-2">防空洞裡學會的事</h2>
         </header>
 
+        <!-- 新增：左下角資訊按鈕 -->
+        <div class="absolute bottom-6 left-6 flex flex-col items-start gap-4 pointer-events-auto">
+            <button onclick="showInfo('concept')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">劇本概念</button>
+            <button onclick="showInfo('team')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">製作團隊</button>
+        </div>
+
         <nav class="flex flex-col items-end gap-6 mt-auto pointer-events-auto">
             <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base font-light">幕一：躲貓貓的規則</button>
             <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">幕二：惡魔的翅膀</button>
@@ -178,11 +176,35 @@
         </nav>
     </div>
 
+    <!-- 密碼解鎖對話框 -->
+    <div id="password-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
+        <div class="text-center bg-black/60 p-8 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+            <h3 class="text-gray-300 tracking-[0.3em] font-light mb-6 text-sm md:text-base">此記憶已封印，請輸入解鎖密碼</h3>
+            <input type="password" id="chapter-password" 
+                   class="bg-transparent border-b border-gray-600 text-white text-center text-xl tracking-[0.5em] outline-none px-4 py-2 mb-2 w-48 focus:border-red-800 transition-colors"
+                   autocomplete="off">
+            <div id="pwd-error" class="text-red-700 text-xs tracking-[0.2em] h-4 mb-6 opacity-0 transition-opacity">密碼錯誤，請重新回憶</div>
+            <div class="flex gap-10 justify-center">
+                <button onclick="closePasswordModal()" class="text-gray-500 text-xs tracking-[0.2em] hover:text-white transition-colors">放棄</button>
+                <button onclick="checkPassword()" class="text-gray-300 text-xs tracking-[0.2em] hover:text-red-600 transition-colors">解鎖</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增：資訊彈出視窗 -->
+    <div id="info-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
+        <div class="bg-black/80 p-8 md:p-12 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-2xl w-[85%] relative text-center">
+            <button onclick="closeInfo()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors text-xl">✕</button>
+            <h3 id="info-title" class="text-gray-200 tracking-[0.4em] font-light mb-8 text-lg md:text-xl border-b border-stone-800 pb-4 inline-block">標題</h3>
+            <p id="info-content" class="text-gray-400 tracking-[0.2em] font-light leading-relaxed text-sm md:text-base text-left min-h-[150px]"></p>
+        </div>
+    </div>
+
     <!-- 切換章節黑幕 -->
     <div id="theater-curtain"></div>
 
     <script>
-        // 偵測是否直接雙擊打開本地檔案 (file://)
+        // 偵測是否直接雙擊打開本地檔案
         if (window.location.protocol === 'file:') {
             document.getElementById('local-warning').classList.remove('hidden');
         }
@@ -193,67 +215,71 @@
             const bgAudio = document.getElementById('bg-audio');
             const uiLayer = document.getElementById('ui-layer');
 
-            // 1. 設定音量與嘗試首次播放
             bgAudio.volume = 0.55;
             
             const attemptPlay = () => {
-                bgAudio.play()
-                    .then(() => {
+                const playPromise = bgAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
                         console.log("背景音樂成功播放！");
-                    })
-                    .catch(error => {
-                        console.log("自動播放被安全原則阻擋，將註冊點擊解鎖監聽器", error);
-                        
-                        // 2. 備用：註冊一個一次性的全螢幕點擊事件來強制播放
+                    }).catch(error => {
+                        console.log("自動播放被安全原則阻擋或無音訊來源", error);
                         const unlockAudio = () => {
-                            bgAudio.play().then(() => {
-                                window.removeEventListener('click', unlockAudio);
-                                window.removeEventListener('touchstart', unlockAudio);
-                            });
+                            const unlockPromise = bgAudio.play();
+                            if (unlockPromise !== undefined) {
+                                unlockPromise.then(() => {
+                                    window.removeEventListener('click', unlockAudio);
+                                    window.removeEventListener('touchstart', unlockAudio);
+                                }).catch(e => {
+                                    console.warn("點擊後仍無法播放:", e);
+                                    window.removeEventListener('click', unlockAudio);
+                                    window.removeEventListener('touchstart', unlockAudio);
+                                });
+                            }
                         };
                         window.addEventListener('click', unlockAudio, { passive: true });
                         window.addEventListener('touchstart', unlockAudio, { passive: true });
                     });
+                }
             };
 
-            // 執行播放邏輯
             attemptPlay();
 
-            // 開場畫面淡出
             startCurtain.classList.add('fade-out');
             
-            // 延遲呈現選單
             setTimeout(() => {
                 uiLayer.style.opacity = '1';
             }, 1000);
 
-            // 隨機空襲震動
             startFearFlicker();
         }
 
-        // 自動隱藏 UI
+        // 自動隱藏 UI (已修復拼字錯誤 return)
         let uiTimer;
         const ui = document.getElementById('ui-layer');
-        window.addEventListener('mousedown', () => {
+        window.addEventListener('mousedown', (e) => {
+            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
             if(document.getElementById('start-curtain').classList.contains('fade-out')) {
                 ui.style.opacity = '0.08';
                 clearTimeout(uiTimer);
             }
         });
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mouseup', (e) => {
+            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
             if(document.getElementById('start-curtain').classList.contains('fade-out')) {
                 uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
             }
         });
 
-        // 手機觸控時也隱藏 UI
-        window.addEventListener('touchstart', () => {
+        window.addEventListener('touchstart', (e) => {
+            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
             if(document.getElementById('start-curtain').classList.contains('fade-out')) {
                 ui.style.opacity = '0.08';
                 clearTimeout(uiTimer);
             }
         });
-        window.addEventListener('touchend', () => {
+        window.addEventListener('touchend', (e) => {
+            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
             if(document.getElementById('start-curtain').classList.contains('fade-out')) {
                 uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
             }
@@ -274,7 +300,87 @@
             }, 6000);
         }
 
+        // 紀錄目前正在嘗試解鎖的章節
+        let pendingChapter = null;
+
         function executeChapter(num) {
+            openPasswordModal(num);
+        }
+
+        function openPasswordModal(num) {
+            pendingChapter = num;
+            const modal = document.getElementById('password-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('chapter-password').value = '';
+            document.getElementById('pwd-error').classList.add('opacity-0');
+            setTimeout(() => document.getElementById('chapter-password').focus(), 100);
+        }
+
+        function closePasswordModal() {
+            const modal = document.getElementById('password-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            pendingChapter = null;
+            ui.style.opacity = '1'; 
+        }
+
+        function checkPassword() {
+            const pwd = document.getElementById('chapter-password').value;
+            let isCorrect = false;
+
+            // 判斷四個章節對應的密碼
+            if (pendingChapter === 1 && pwd === '12') isCorrect = true;
+            else if (pendingChapter === 2 && pwd === '11') isCorrect = true;
+            else if (pendingChapter === 3 && pwd === '13') isCorrect = true;
+            else if (pendingChapter === 4 && pwd === '14') isCorrect = true;
+
+            if (isCorrect) {
+                let unlockedChapter = pendingChapter;
+                closePasswordModal();
+                proceedToChapter(unlockedChapter);
+            } else {
+                const errorEl = document.getElementById('pwd-error');
+                errorEl.classList.remove('opacity-0');
+                document.getElementById('chapter-password').value = '';
+                
+                const scene = document.querySelector('a-scene');
+                if (scene) {
+                    scene.classList.add('shake-active');
+                    setTimeout(() => scene.classList.remove('shake-active'), 500);
+                }
+            }
+        }
+
+        document.getElementById('chapter-password').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        // 資訊視窗邏輯
+        function showInfo(type) {
+            const modal = document.getElementById('info-modal');
+            const title = document.getElementById('info-title');
+            const content = document.getElementById('info-content');
+
+            if (type === 'concept') {
+                title.innerText = '劇本概念';
+                content.innerHTML = '《煙霧中長大的孩子》探討在戰火與防空洞中成長的童年。<br><br>我們試圖以孩子的視角，將殘酷的戰爭轉化為「躲貓貓」、「惡魔的翅膀」與「天空的禮物」等隱喻。在封閉且充滿恐懼的地下室裡，那些未能送達的愛與對光明的渴望，最終化作漫天星火，照亮了廢墟與黑夜。';
+            } else if (type === 'team') {
+                title.innerText = '製作團隊';
+                content.innerHTML = '<div class="text-center">製作與程式開發<br><span class="text-gray-200">煙霧專案團隊</span><br><br>視覺與美術設計<br><span class="text-gray-200">視覺設計團隊</span><br><br>音效與配樂<br><span class="text-gray-200">聲音工程團隊</span><br><br><span class="text-xs text-stone-500 mt-4 block">特別感謝所有為此專案提供協助的朋友。</span></div>';
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            ui.style.opacity = '0.08';
+        }
+
+        function closeInfo() {
+            const modal = document.getElementById('info-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            ui.style.opacity = '1';
+        }
+
+        function proceedToChapter(num) {
             document.getElementById('theater-curtain').style.opacity = '1';
             setTimeout(() => window.location.href = `part${num}.html`, 2000);
         }
