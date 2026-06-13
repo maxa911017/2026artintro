@@ -86,7 +86,7 @@
             pointer-events: none; display: flex; flex-direction: column;
             justify-content: space-between; transition: opacity 1s ease;
             padding: max(2.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
-            opacity: 0; 
+            opacity: 1; /* 直接設為 1，移除原本的 0 */
         }
 
         .pointer-events-auto { pointer-events: auto; }
@@ -97,18 +97,6 @@
             text-shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
         .act-btn:hover { color: #ffffff; opacity: 1; letter-spacing: 0.25em; transform: translateX(-10px); text-shadow: 0 0 15px rgba(255,80,0,0.6); }
-
-        #start-curtain {
-            position: fixed; inset: 0; background-color: #080808; z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1), transform 2s ease;
-            cursor: pointer;
-        }
-        #start-curtain.fade-out {
-            opacity: 0;
-            pointer-events: none;
-            transform: scale(1.05);
-        }
 
         #theater-curtain {
             position: fixed; inset: 0; background-color: #000; z-index: 50;
@@ -144,17 +132,6 @@
     <div class="noise-overlay"></div>
     <div id="flicker-layer" class="flicker-overlay"></div>
 
-    <!-- 互動開場帷幕 -->
-    <div id="start-curtain" onclick="startExperience()">
-        <div class="text-center px-6">
-            <p class="text-xs tracking-[0.4em] text-red-700 font-light mb-4 uppercase">Shellproof Shelter Memories</p>
-            <h2 class="text-xl md:text-2xl font-light tracking-[0.5em] text-gray-300 mb-8">防空洞深處，我們聽著外面的聲音...</h2>
-            <div class="inline-block px-8 py-3 border border-stone-800 text-stone-400 text-xs tracking-[0.3em] uppercase hover:text-white hover:border-red-900 transition-all duration-700 ease-in-out">
-                點擊 進入記憶
-            </div>
-        </div>
-    </div>
-
     <!-- UI 選單層 -->
     <div id="ui-layer">
         <header class="text-left drop-shadow-2xl">
@@ -162,7 +139,7 @@
             <h2 class="text-xs md:text-sm text-gray-400 tracking-[0.3em] font-light mt-2">防空洞裡學會的事</h2>
         </header>
 
-        <!-- 新增：左下角資訊按鈕 -->
+        <!-- 左下角資訊按鈕 -->
         <div class="absolute bottom-6 left-6 flex flex-col items-start gap-4 pointer-events-auto">
             <button onclick="showInfo('concept')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">劇本概念</button>
             <button onclick="showInfo('team')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">製作團隊</button>
@@ -191,7 +168,7 @@
         </div>
     </div>
 
-    <!-- 新增：資訊彈出視窗 -->
+    <!-- 資訊彈出視窗 -->
     <div id="info-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
         <div class="bg-black/80 p-8 md:p-12 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-2xl w-[85%] relative text-center">
             <button onclick="closeInfo()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors text-xl">✕</button>
@@ -209,80 +186,58 @@
             document.getElementById('local-warning').classList.remove('hidden');
         }
 
-        // 強制解鎖並播放音樂的整合函數
-        function startExperience() {
-            const startCurtain = document.getElementById('start-curtain');
+        // 網頁載入後直接初始化體驗
+        window.addEventListener('DOMContentLoaded', () => {
             const bgAudio = document.getElementById('bg-audio');
-            const uiLayer = document.getElementById('ui-layer');
-
             bgAudio.volume = 0.55;
             
+            // 嘗試自動播放背景音樂
             const attemptPlay = () => {
                 const playPromise = bgAudio.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
-                        console.log("背景音樂成功播放！");
+                        console.log("背景音樂自動播放成功！");
                     }).catch(error => {
-                        console.log("自動播放被安全原則阻擋或無音訊來源", error);
+                        console.log("自動播放被安全原則阻擋，等待使用者首次點擊畫面。");
+                        // 如果被阻擋，等待任意點擊後播放
                         const unlockAudio = () => {
-                            const unlockPromise = bgAudio.play();
-                            if (unlockPromise !== undefined) {
-                                unlockPromise.then(() => {
-                                    window.removeEventListener('click', unlockAudio);
-                                    window.removeEventListener('touchstart', unlockAudio);
-                                }).catch(e => {
-                                    console.warn("點擊後仍無法播放:", e);
-                                    window.removeEventListener('click', unlockAudio);
-                                    window.removeEventListener('touchstart', unlockAudio);
-                                });
-                            }
+                            bgAudio.play().then(() => {
+                                window.removeEventListener('click', unlockAudio);
+                                window.removeEventListener('touchstart', unlockAudio);
+                            }).catch(e => console.warn("解鎖播放失敗:", e));
                         };
-                        window.addEventListener('click', unlockAudio, { passive: true });
-                        window.addEventListener('touchstart', unlockAudio, { passive: true });
+                        window.addEventListener('click', unlockAudio, { passive: true, once: true });
+                        window.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
                     });
                 }
             };
 
+            // 啟動特效與音樂嘗試
             attemptPlay();
-
-            startCurtain.classList.add('fade-out');
-            
-            setTimeout(() => {
-                uiLayer.style.opacity = '1';
-            }, 1000);
-
             startFearFlicker();
-        }
+        });
 
-        // 自動隱藏 UI (已修復拼字錯誤 return)
+        // 自動隱藏 UI (移除對 curtain 的判斷)
         let uiTimer;
         const ui = document.getElementById('ui-layer');
         window.addEventListener('mousedown', (e) => {
             if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                ui.style.opacity = '0.08';
-                clearTimeout(uiTimer);
-            }
+            ui.style.opacity = '0.08';
+            clearTimeout(uiTimer);
         });
         window.addEventListener('mouseup', (e) => {
             if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-            }
+            uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
         });
 
         window.addEventListener('touchstart', (e) => {
             if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                ui.style.opacity = '0.08';
-                clearTimeout(uiTimer);
-            }
+            ui.style.opacity = '0.08';
+            clearTimeout(uiTimer);
         });
         window.addEventListener('touchend', (e) => {
             if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            if(document.getElementById('start-curtain').classList.contains('fade-out')) {
-                uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-            }
+            uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
         });
 
         function startFearFlicker() {
