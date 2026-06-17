@@ -124,13 +124,13 @@
             text-align: center; z-index: 35; opacity: 0; text-shadow: 0 0 15px red; width: 90%;
         }
 
-        /* 系統分析日誌 (防手機版溢出) */
+        /* 系統分析日誌 */
         #analysis-log {
             position: absolute; bottom: clamp(8vh, 12vh, 15vh); left: clamp(15px, 6vw, 60px);
             font-size: clamp(0.6rem, 2.5vw, 0.9rem); color: #FFF; font-family: 'Courier Prime', monospace;
             letter-spacing: 0.1em; line-height: 1.8; opacity: 0.8;
             text-shadow: 0 0 5px rgba(255,255,255,0.5);
-            max-width: clamp(220px, 80vw, 40vw); /* 手機版佔比更大 */
+            max-width: clamp(220px, 80vw, 40vw);
         }
         .log-entry { margin-bottom: 5px; opacity: 0; animation: typeIn 0.1s forwards; border-left: 2px solid red; padding-left: 8px;}
         @keyframes typeIn { to { opacity: 1; } }
@@ -197,11 +197,9 @@
 </head>
 <body>
 
-    <!-- 監視器與定格畫面 -->
     <canvas id="c"></canvas>
     <img id="captured-img" alt="Captured Record">
     
-    <!-- 視覺特效 -->
     <div class="vignette"></div>
     <div class="scanlines"></div>
     <div id="alarm-overlay"></div>
@@ -210,7 +208,6 @@
         <div id="final-message">從今開始，你不再有名字了</div>
     </div> 
 
-    <!-- 階段一與二：動態審查 UI -->
     <div id="hud" class="hidden">
         <div id="height-scale">
             <div class="scale-mark major"></div><div class="scale-mark"></div><div class="scale-mark"></div>
@@ -225,8 +222,6 @@
         </div>
         
         <div id="target-box"></div>
-        
-        <!-- 動態分析日誌 -->
         <div id="analysis-log"></div>
 
         <div class="hud-bottom">
@@ -235,14 +230,10 @@
         </div>
     </div>
 
-    <!-- 階段三：文字指令與亂碼生成 -->
     <div id="center-text"></div>
     <div id="rolling-code"></div>
-
-    <!-- 階段四：最終剝奪烙印 -->
     <div id="final-stamp"></div>
 
-    <!-- 階段五：行銷宣傳海報疊加層 -->
     <div id="marketing-frame" class="hidden">
         <div class="mkt-header">
             <div class="mkt-title">
@@ -264,20 +255,64 @@
         </div>
     </div>
 
-    <!-- 控制按鈕 -->
     <div id="trigger-zone" class="hidden">開始身分審查 (START)</div>
     <div id="reset-zone" class="hidden">RESET SYSTEM</div>
     
     <video id="v" class="hidden" autoplay playsinline></video>
 
-    <!-- 初始介面 -->
     <div id="init-screen">
-        <h1 class="tracking-[0.5em] mb-4">系統待命</h1>
+        <h1 class="text-2xl tracking-[0.5em] mb-4">系統待命</h1>
         <p class="text-sm tracking-widest text-gray-500">點擊啟動監視系統與音效</p>
         <a id="escape-btn" href="#" target="_blank" class="mt-8 text-xs text-gray-400 border border-gray-400 px-4 py-2 hover:bg-white hover:text-black transition-colors hidden">跳出平台限制以允許攝影機</a>
     </div>
 
-    <script>
+    <script type="module">
+        // 匯入 Firebase SDK (移除 Storage，只留 Firestore)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // ==========================================
+        // 【重要】請將下方設定換成你新專案的 Config
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8ERvnrdHJzTAr7xDIdXuiqZ9o7d_wW_U",
+            authDomain: "checkpoint-system-ee6d7.firebaseapp.com",
+            projectId: "checkpoint-system-ee6d7",
+            storageBucket: "checkpoint-system-ee6d7.firebasestorage.app",
+            messagingSenderId: "188995102122",
+            appId: "1:188995102122:web:6d8ef558b8c9f6262bf7d3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 背景上傳函式：將圖片轉成文字，直接存進免費的資料庫！
+        async function uploadRecordToFirebase(canvasElement, generatedID) {
+            try {
+                // 為了避免檔案過大塞爆免費資料庫，我們創建一個隱藏的小畫布來壓縮照片 (寬度 800px)
+                const miniCanvas = document.createElement('canvas');
+                miniCanvas.width = 800;
+                miniCanvas.height = Math.floor(800 * (canvasElement.height / canvasElement.width));
+                const miniCtx = miniCanvas.getContext('2d');
+                miniCtx.drawImage(canvasElement, 0, 0, miniCanvas.width, miniCanvas.height);
+                
+                // 將圖片壓縮成品質 0.6 的純文字 (Base64)
+                const compressedImageText = miniCanvas.toDataURL('image/jpeg', 0.6);
+                
+                // 將這段文字當作一般資料，寫入免費的 Firestore 裡
+                await addDoc(collection(db, "archived_subjects"), {
+                    subjectID: generatedID,
+                    capturedAt: new Date(),
+                    status: "IDENTITY_REVOKED",
+                    imageData: compressedImageText // 這裡是重點！把照片當文字存
+                });
+                
+                console.log(`[SYS] Record ${generatedID} successfully uploaded to Central Database.`);
+            } catch (error) {
+                console.error("[SYS] Upload Failed: ", error);
+            }
+        }
+
         const c = document.getElementById('c');
         const ctx = c.getContext('2d');
         const v = document.getElementById('v');
@@ -300,7 +335,6 @@
         let isRunning = false;
         let isProcessing = false;
 
-        // --- 音效引擎 ---
         let audioCtx, humGain;
 
         function initAudio() {
@@ -319,8 +353,7 @@
         function playAlarm() {
             if(!audioCtx) return;
             const osc = audioCtx.createOscillator();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.type = 'square'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
             osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.5);
             osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 1);
             const gain = audioCtx.createGain();
@@ -378,7 +411,6 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.3);
         }
 
-        // --- 視覺引擎 ---
         function resize() {
             c.width = window.innerWidth; c.height = window.innerHeight;
         }
@@ -391,7 +423,6 @@
             const cRatio = c.width / c.height;
             let drawW, drawH, drawX, drawY;
             
-            // 使用 CSS Object-fit: cover 概念來繪製 Canvas
             if (cRatio > vRatio) { 
                 drawW = c.width; drawH = c.width / vRatio; 
                 drawX = 0; drawY = (c.height - drawH) / 2; 
@@ -401,7 +432,7 @@
             }
 
             ctx.save();
-            ctx.translate(c.width, 0); ctx.scale(-1, 1); // 鏡像
+            ctx.translate(c.width, 0); ctx.scale(-1, 1); 
             ctx.drawImage(v, c.width - drawW - drawX, drawY, drawW, drawH);
             ctx.restore();
             
@@ -411,7 +442,6 @@
             requestAnimationFrame(drawLoop);
         }
 
-        // --- 非同步腳本系統 ---
         const sleep = ms => new Promise(r => setTimeout(r, ms));
 
         function showText(text, isBlinking = false) {
@@ -442,10 +472,9 @@
             triggerZone.classList.add('hidden');
             analysisLog.innerHTML = ''; 
             
-            // 【階段 1：警報與鎖定 (0-5秒)】
             actionStatus.innerText = "UNAUTHORIZED ENTITY";
             actionStatus.style.color = "red";
-            targetBox.classList.add('locked'); // 使用 CSS class 控制響應式紅框
+            targetBox.classList.add('locked'); 
             
             alarmOverlay.classList.add('alarm-flash');
             let alarmInt = setInterval(playAlarm, 1000);
@@ -460,7 +489,6 @@
             clearInterval(alarmInt);
             alarmOverlay.classList.remove('alarm-flash');
             
-            // 【階段 2：身分抹除與重編 (5-15秒)】
             showText("抹除舊有身分...\nERASING IDENTITY");
             addLog("[防冒名] 交叉比對全區資料庫...");
             await sleep(2000);
@@ -488,7 +516,6 @@
             rollingCode.style.textShadow = "0 0 30px red";
             addLog(`[分配] 編號分配完成：${finalID}`);
             
-            // 【階段 3：強迫服從 (15-25秒)】
             actionStatus.innerText = "SUBJECT LOGGED";
             await sleep(2000);
             rollingCode.style.opacity = 0; 
@@ -514,7 +541,6 @@
             if(humGain) humGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
             await sleep(500);
 
-            // 【階段 4：剝奪瞬間 (25秒)】
             playFlashSound();
             flash.classList.remove('flash-trigger');
             void flash.offsetWidth; 
@@ -524,22 +550,21 @@
             capturedImg.src = dataURL;
             capturedImg.style.opacity = '1'; 
             
-            // 【階段 5：行銷宣傳海報模式 (26秒以後)】
+            // 🚀 觸發「偷吃步」免費上傳機制！
+            uploadRecordToFirebase(c, finalID);
+
             await sleep(800);
-            
             finalStamp.innerText = finalID;
             finalStamp.style.opacity = 1;
             playStampSound();
             
             await sleep(1000);
-            
             document.getElementById('final-barcode').innerText = finalID + " |||| || | |||";
             hud.classList.add('hidden'); 
             marketingFrame.classList.remove('hidden');
             setTimeout(() => { marketingFrame.style.opacity = 1; }, 50);
             setTimeout(() => { resetZone.classList.remove('hidden'); }, 2000);
 
-            // 【階段 6：10秒後自動幕黑與重新載入】
             setTimeout(() => {
                 blackout.style.opacity = 1;
                 resetZone.classList.add('hidden');
@@ -555,12 +580,10 @@
             }, 10000);
         });
 
-        // 系統手動重置跳轉
         resetZone.addEventListener('click', () => {
             window.location.href = 'index.html';
         });
 
-        // --- 系統喚醒 ---
         initScreen.addEventListener('click', async () => {
             try {
                 initAudio();
