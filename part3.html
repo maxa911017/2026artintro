@@ -448,44 +448,49 @@
             }, 40);
         }
 
-        function triggerExplosion() {
-            if(navigator.vibrate) navigator.vibrate([300, 100, 500, 100, 1000]);
-            
-            if(audioCtx) {
-                tinnitusGain.gain.setValueAtTime(1, audioCtx.currentTime);
-            }
+     function triggerExplosion() {
+    // 1. 極限震動與閃光
+    if(navigator.vibrate) navigator.vibrate([300, 100, 500, 100, 1000]);
+    
+    // 耳鳴開到最大
+    if(audioCtx) {
+        tinnitusGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    }
 
-            document.getElementById('terminal-layer').style.display = 'none';
-            document.getElementById('news-layer').style.display = 'none';
-            
-            const whiteout = document.getElementById('whiteout');
-            whiteout.style.opacity = '1';
+    // 隱藏背後的新聞與終端機
+    document.getElementById('terminal-layer').style.display = 'none';
+    document.getElementById('news-layer').style.display = 'none';
+    
+    // 顯示全白畫面
+    const whiteout = document.getElementById('whiteout');
+    whiteout.style.backgroundColor = "white"; // 確保一開始是白的
+    whiteout.style.opacity = '1';
 
-            // 白畫面停留、文字浮現
-            setTimeout(() => {
-                if(audioCtx) {
-                    tinnitusGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
-                }
-                const rebootMsg = document.getElementById('reboot-msg');
-                rebootMsg.style.opacity = '1';
-
-                // 停留5秒後被血紅色吞噬並重置
-                setTimeout(() => {
-                    rebootMsg.style.opacity = '0';
-                    whiteout.style.transition = 'background-color 1.5s cubic-bezier(0.4, 0, 0.2, 1)';
-                    whiteout.style.backgroundColor = '#7f0000'; 
-                    
-                    if(navigator.vibrate) navigator.vibrate(200);
-
-                    // 1.5秒血紅變色完成後重整
-                    setTimeout(() => {
-                        window.location.reload(); 
-                    }, 1500);
-
-                }, 5000); 
-
-            }, 2000);
+    // 2. 爆炸後 2 秒，耳鳴漸漸消失，浮現粉飾太平的字
+    setTimeout(() => {
+        if(audioCtx) {
+            tinnitusGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
         }
-    </script>
-</body>
-</html>
+        document.getElementById('reboot-msg').style.opacity = '1';
+    }, 2000);
+
+    // 3. 【跳轉機制加在這裡】爆炸後 7 秒 (2秒白畫面 + 5秒文字停留)
+    setTimeout(() => {
+        // 文字消失，畫面被血紅色吞噬
+        document.getElementById('reboot-msg').style.opacity = '0';
+        whiteout.style.transition = "background-color 1.5s ease-in";
+        whiteout.style.backgroundColor = "#5a0000"; // 深血紅色
+        
+        // 伴隨一陣沉悶的死寂震動
+        if(navigator.vibrate) navigator.vibrate(800);
+
+        // 4. 紅色吞噬完成後 (1.5秒後)，強制跳轉回首頁
+        setTimeout(() => {
+            // 如果你的主檔案名稱叫做 index.html，就用這行：
+            window.location.href = 'index.html'; 
+            
+            // (如果你只有這一個檔案，也可以直接寫 window.location.reload(); 讓它重新整理)
+        }, 1500);
+
+    }, 7000); // 2000ms + 5000ms
+}
