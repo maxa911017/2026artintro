@@ -7,8 +7,6 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400&display=swap" rel="stylesheet">
-    <!-- 載入正統 360 度環景引擎 A-Frame -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -32,7 +30,28 @@
             user-select: none;
         }
 
-        .a-enter-vr { display: none !important; }
+        /* 拖曳背景容器 */
+        #bg-container {
+            position: fixed; inset: 0;
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* 拖曳圖片本身：刻意放大至 120% 以產生可拖曳的空間 */
+        #bg-image {
+            position: absolute;
+            top: 0; left: 0;
+            width: 120vw; height: 120vh;
+            object-fit: cover;
+            cursor: grab;
+            -webkit-user-drag: none;
+            will-change: transform;
+        }
+        
+        #bg-image.grabbing {
+            cursor: grabbing;
+        }
 
         .noise-overlay {
             position: fixed; inset: 0;
@@ -86,7 +105,7 @@
             pointer-events: none; display: flex; flex-direction: column;
             justify-content: space-between; transition: opacity 1s ease;
             padding: max(2.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
-            opacity: 1; /* 直接設為 1，移除原本的 0 */
+            opacity: 1; 
         }
 
         .pointer-events-auto { pointer-events: auto; }
@@ -106,24 +125,12 @@
 </head>
 <body class="font-serif antialiased bg-black">
 
-    <!-- 本機直接開啟的黑畫面警告 -->
-    <div id="local-warning" class="hidden fixed top-0 left-0 w-full bg-red-700 text-white text-xs md:text-sm text-center py-3 px-4 z-[999] shadow-lg">
-        ⚠️ <b>注意：</b>您目前直接雙擊開啟了檔案。瀏覽器安全機制會阻擋 360 度圖片載入（導致黑畫面）。<br>
-        請使用 <b>VS Code</b> 的 <b>Live Server</b> 擴充功能開啟此網頁，即可正常顯示！
-    </div>
+    <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
 
-    <!-- 真正的 3D 360度環景引擎 -->
-    <a-scene id="experience-scene" embedded vr-mode-ui="enabled: false">
-        <a-assets>
-            <img id="panorama" src="back.jpg" crossorigin="anonymous">
-            <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
-        </a-assets>
-        
-        <a-sky src="#panorama" rotation="0 -90 0" 
-               animation="property: rotation; to: 0 270 0; loop: true; dur: 500000; easing: linear"></a-sky>
-               
-        <a-entity camera look-controls="reverseMouseDrag: true"></a-entity>
-    </a-scene>
+    <!-- 可手動拖曳的 2D 背景層 -->
+    <div id="bg-container">
+        <img id="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
+    </div>
 
     <!-- 環境火光與特效 -->
     <div class="fire-glow"></div>
@@ -182,11 +189,6 @@
     <div id="theater-curtain"></div>
 
     <script>
-        // 偵測是否直接雙擊打開本地檔案
-        if (window.location.protocol === 'file:') {
-            document.getElementById('local-warning').classList.remove('hidden');
-        }
-
         // 網頁載入後直接初始化體驗
         window.addEventListener('DOMContentLoaded', () => {
             const bgAudio = document.getElementById('bg-audio');
@@ -199,8 +201,7 @@
                     playPromise.then(() => {
                         console.log("背景音樂自動播放成功！");
                     }).catch(error => {
-                        console.log("自動播放被安全原則阻擋，等待使用者首次點擊畫面。");
-                        // 如果被阻擋，等待任意點擊後播放
+                        console.log("等待使用者首次點擊畫面以解鎖音效。");
                         const unlockAudio = () => {
                             bgAudio.play().then(() => {
                                 window.removeEventListener('click', unlockAudio);
@@ -213,50 +214,133 @@
                 }
             };
 
-            // 啟動特效與音樂嘗試
             attemptPlay();
             startFearFlicker();
         });
 
-        // 自動隱藏 UI (移除對 curtain 的判斷)
+        // ==========================================
+        //  背景拖曳邏輯 (取代 VR 360)
+        // ==========================================
+        const bgContainer = document.getElementById('bg-container');
+        const bgImage = document.getElementById('bg-image');
+        
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let currentTranslateX = 0, currentTranslateY = 0;
+        let initialTranslateX = 0, initialTranslateY = 0;
+
+        // 計算可拖曳的安全範圍
+        function getDragBounds() {
+            const containerW = bgContainer.clientWidth;
+            const containerH = bgContainer.clientHeight;
+            const imgW = bgImage.clientWidth;
+            const imgH = bgImage.clientHeight;
+            return {
+                minX: Math.min(0, containerW - imgW),
+                minY: Math.min(0, containerH - imgH)
+            };
+        }
+
+        // 初始化將圖片置中
+        function initImagePosition() {
+            const bounds = getDragBounds();
+            currentTranslateX = bounds.minX / 2;
+            currentTranslateY = bounds.minY / 2;
+            initialTranslateX = currentTranslateX;
+            initialTranslateY = currentTranslateY;
+            bgImage.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px)`;
+        }
+
+        // 當圖片載入完成或視窗縮放時重新計算置中
+        if (bgImage.complete) initImagePosition();
+        else bgImage.addEventListener('load', initImagePosition);
+        window.addEventListener('resize', initImagePosition);
+
+        // 處理拖曳事件
+        function handleDragStart(x, y) {
+            isDragging = true;
+            bgImage.classList.add('grabbing');
+            startX = x;
+            startY = y;
+        }
+
+        function handleDragMove(x, y) {
+            if (!isDragging) return;
+            const dx = x - startX;
+            const dy = y - startY;
+            const bounds = getDragBounds();
+            
+            // 計算新位置並限制在邊界內
+            currentTranslateX = Math.max(bounds.minX, Math.min(0, initialTranslateX + dx));
+            currentTranslateY = Math.max(bounds.minY, Math.min(0, initialTranslateY + dy));
+            
+            bgImage.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px)`;
+        }
+
+        function handleDragEnd() {
+            if (isDragging) {
+                isDragging = false;
+                bgImage.classList.remove('grabbing');
+                initialTranslateX = currentTranslateX;
+                initialTranslateY = currentTranslateY;
+            }
+        }
+
+        // 綁定滑鼠事件
+        bgContainer.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                e.preventDefault(); 
+                handleDragMove(e.clientX, e.clientY);
+            }
+        }, { passive: false });
+        window.addEventListener('mouseup', handleDragEnd);
+
+        // 綁定觸控事件
+        bgContainer.addEventListener('touchstart', (e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+        bgContainer.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                e.preventDefault(); // 防止手機預設的頁面滾動與下拉重整
+                handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+        window.addEventListener('touchend', handleDragEnd);
+
+
         let uiTimer;
         const ui = document.getElementById('ui-layer');
-        window.addEventListener('mousedown', (e) => {
+        
+        function dimUI(e) {
             if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
             ui.style.opacity = '0.08';
             clearTimeout(uiTimer);
-        });
-        window.addEventListener('mouseup', (e) => {
+        }
+        function restoreUI(e) {
             if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
             uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-        });
+        }
 
-        window.addEventListener('touchstart', (e) => {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            ui.style.opacity = '0.08';
-            clearTimeout(uiTimer);
-        });
-        window.addEventListener('touchend', (e) => {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-        });
+        window.addEventListener('mousedown', dimUI);
+        window.addEventListener('mouseup', restoreUI);
+        window.addEventListener('touchstart', dimUI, {passive: true});
+        window.addEventListener('touchend', restoreUI);
 
+        // 環境恐懼震動與閃爍 (套用到 bg-container 而非 a-scene)
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
-            const scene = document.querySelector('a-scene');
+            const sceneContainer = document.getElementById('bg-container');
             setInterval(() => {
                 if (Math.random() > 0.65) {
                     flicker.classList.add('flicker-active');
-                    scene.classList.add('shake-active');
+                    sceneContainer.classList.add('shake-active');
                     setTimeout(() => {
                         flicker.classList.remove('flicker-active');
-                        scene.classList.remove('shake-active');
+                        sceneContainer.classList.remove('shake-active');
                     }, 500);
                 }
             }, 6000);
         }
 
-        // 紀錄目前正在嘗試解鎖的章節
         let pendingChapter = null;
 
         function executeChapter(num) {
@@ -283,12 +367,11 @@
             const pwd = document.getElementById('chapter-password').value;
             let isCorrect = false;
 
-            // 判斷五個章節對應的密碼
             if (pendingChapter === 1 && pwd === '11') isCorrect = true;
             else if (pendingChapter === 2 && pwd === '12') isCorrect = true;
             else if (pendingChapter === 3 && pwd === '13') isCorrect = true;
             else if (pendingChapter === 4 && pwd === '14') isCorrect = true;
-            else if (pendingChapter === 5 && pwd === '15') isCorrect = true; // 新增第五章判斷
+            else if (pendingChapter === 5 && pwd === '15') isCorrect = true; 
 
             if (isCorrect) {
                 let unlockedChapter = pendingChapter;
@@ -299,21 +382,16 @@
                 errorEl.classList.remove('opacity-0');
                 document.getElementById('chapter-password').value = '';
                 
-                const scene = document.querySelector('a-scene');
-                if (scene) {
-                    scene.classList.add('shake-active');
-                    setTimeout(() => scene.classList.remove('shake-active'), 500);
-                }
+                const sceneContainer = document.getElementById('bg-container');
+                sceneContainer.classList.add('shake-active');
+                setTimeout(() => sceneContainer.classList.remove('shake-active'), 500);
             }
         }
 
         document.getElementById('chapter-password').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                checkPassword();
-            }
+            if (e.key === 'Enter') checkPassword();
         });
 
-        // 資訊視窗邏輯
         function showInfo(type) {
             const modal = document.getElementById('info-modal');
             const title = document.getElementById('info-title');
@@ -342,9 +420,6 @@
             setTimeout(() => window.location.href = `part${num}.html`, 2000);
         }
 
-        // ==========================================
-        //  超寫實 Canvas 火焰、火星與灰燼特效
-        // ==========================================
         const canvas = document.getElementById('fire-canvas');
         const ctx = canvas.getContext('2d');
         
@@ -444,12 +519,8 @@
         function initCanvas() {
             particles = [];
             flameParticles = [];
-            for (let i = 0; i < 450; i++) {
-                particles.push(new AshAndSpark());
-            }
-            for (let i = 0; i < 180; i++) {
-                flameParticles.push(new FlameParticle());
-            }
+            for (let i = 0; i < 450; i++) particles.push(new AshAndSpark());
+            for (let i = 0; i < 180; i++) flameParticles.push(new FlameParticle());
         }
 
         function animate() {
