@@ -150,6 +150,7 @@
             <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">幕二：惡魔的翅膀</button>
             <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base font-light">幕三：天空的禮物</button>
             <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base font-light">終幕：進入記憶</button>
+            <button onclick="executeChapter(5)" class="act-btn text-sm md:text-base font-light">紙飛機的希望</button>
         </nav>
     </div>
 
@@ -282,11 +283,12 @@
             const pwd = document.getElementById('chapter-password').value;
             let isCorrect = false;
 
-            // 判斷四個章節對應的密碼
+            // 判斷五個章節對應的密碼
             if (pendingChapter === 1 && pwd === '12') isCorrect = true;
             else if (pendingChapter === 2 && pwd === '11') isCorrect = true;
             else if (pendingChapter === 3 && pwd === '13') isCorrect = true;
             else if (pendingChapter === 4 && pwd === '14') isCorrect = true;
+            else if (pendingChapter === 5 && pwd === '05') isCorrect = true; // 新增第五章判斷
 
             if (isCorrect) {
                 let unlockedChapter = pendingChapter;
