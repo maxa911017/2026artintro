@@ -28,6 +28,8 @@
             overflow: hidden; 
             overscroll-behavior: none;
             user-select: none;
+            touch-action: none; /* 新增：徹底禁用預設手勢，確保手機滑動不會被中斷 */
+            -webkit-user-select: none;
         }
 
         /* 拖曳背景容器 */
@@ -38,15 +40,23 @@
             z-index: 1;
         }
 
-        /* 拖曳圖片本身：刻意放大至 120% 以產生可拖曳的空間 */
+        /* 拖曳圖片本身：給予足夠的寬高產生拖曳空間 */
         #bg-image {
             position: absolute;
             top: 0; left: 0;
-            width: 120vw; height: 120vh;
+            width: 150vw; height: 120vh;
             object-fit: cover;
             cursor: grab;
             -webkit-user-drag: none;
             will-change: transform;
+        }
+        
+        /* 新增：手機版直式螢幕時，給予更寬的寬度以確保有足夠的「左右環顧」空間 */
+        @media (max-width: 768px) {
+            #bg-image {
+                width: 250vw; 
+                height: 110vh;
+            }
         }
         
         #bg-image.grabbing {
@@ -257,7 +267,11 @@
         window.addEventListener('resize', initImagePosition);
 
         // 處理拖曳事件
-        function handleDragStart(x, y) {
+        function handleDragStart(x, y, target) {
+            // 新增：若點擊在按鈕或輸入框上，不觸發背景拖曳，以免影響 UI 互動
+            if (target && (target.closest('button') || target.closest('input') || target.closest('.pointer-events-auto'))) {
+                return;
+            }
             isDragging = true;
             bgImage.classList.add('grabbing');
             startX = x;
@@ -286,8 +300,8 @@
             }
         }
 
-        // 綁定滑鼠事件
-        bgContainer.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
+        // 綁定滑鼠事件 (改綁定到 window 確保滑動順暢)
+        window.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY, e.target));
         window.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 e.preventDefault(); 
@@ -296,16 +310,20 @@
         }, { passive: false });
         window.addEventListener('mouseup', handleDragEnd);
 
-        // 綁定觸控事件
-        bgContainer.addEventListener('touchstart', (e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-        bgContainer.addEventListener('touchmove', (e) => {
+        // 綁定觸控事件 (改綁定到 window 並使用 passive: false 確保完全接管手勢)
+        window.addEventListener('touchstart', (e) => {
+            handleDragStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+        }, { passive: false });
+        
+        window.addEventListener('touchmove', (e) => {
             if (isDragging) {
                 e.preventDefault(); // 防止手機預設的頁面滾動與下拉重整
                 handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
             }
         }, { passive: false });
+        
         window.addEventListener('touchend', handleDragEnd);
-
+        window.addEventListener('touchcancel', handleDragEnd);
 
         let uiTimer;
         const ui = document.getElementById('ui-layer');
