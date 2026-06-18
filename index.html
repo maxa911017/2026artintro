@@ -40,27 +40,19 @@
             z-index: 1;
         }
 
-        /* 拖曳圖片本身：給予足夠的寬高產生拖曳空間 */
-        #bg-image {
+        /* 自動旋轉層 */
+        #bg-pan-layer {
+            display: flex;
             position: absolute;
             top: 0; left: 0;
-            width: 150vw; height: 120vh;
-            object-fit: cover;
-            cursor: grab;
-            -webkit-user-drag: none;
             will-change: transform;
+            height: 100%;
         }
         
-        /* 新增：手機版直式螢幕時，給予更寬的寬度以確保有足夠的「左右環顧」空間 */
-        @media (max-width: 768px) {
-            #bg-image {
-                width: 250vw; 
-                height: 110vh;
-            }
-        }
-        
-        #bg-image.grabbing {
-            cursor: grabbing;
+        /* 圖片本身不設定寬高，由 JS 動態計算以確保無縫拼接 */
+        .bg-image {
+            display: block;
+            max-width: none;
         }
 
         .noise-overlay {
@@ -137,9 +129,12 @@
 
     <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
 
-    <!-- 可手動拖曳的 2D 背景層 -->
+    <!-- 可自動 360 度旋轉的背景層 (無縫拼接) -->
     <div id="bg-container">
-        <img id="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
+        <div id="bg-pan-layer">
+            <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
+            <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
+        </div>
     </div>
 
     <!-- 環境火光與特效 -->
@@ -229,102 +224,65 @@
         });
 
         // ==========================================
-        //  背景拖曳邏輯 (取代 VR 360)
+        //  自動 360 度環景旋轉邏輯 (無縫拼接)
         // ==========================================
-        const bgContainer = document.getElementById('bg-container');
-        const bgImage = document.getElementById('bg-image');
+        const bgPanLayer = document.getElementById('bg-pan-layer');
+        const bgImages = document.querySelectorAll('.bg-image');
         
-        let isDragging = false;
-        let startX = 0, startY = 0;
-        let currentTranslateX = 0, currentTranslateY = 0;
-        let initialTranslateX = 0, initialTranslateY = 0;
+        let panSpeed = 0.35; // 控制旋轉速度 (數值越大轉越快，0.35 是緩慢沉浸的速度)
+        let currentX = 0;
+        let imageWidth = 0;
 
-        // 計算可拖曳的安全範圍
-        function getDragBounds() {
-            const containerW = bgContainer.clientWidth;
-            const containerH = bgContainer.clientHeight;
-            const imgW = bgImage.clientWidth;
-            const imgH = bgImage.clientHeight;
-            return {
-                minX: Math.min(0, containerW - imgW),
-                minY: Math.min(0, containerH - imgH)
-            };
-        }
-
-        // 初始化將圖片置中
-        function initImagePosition() {
-            const bounds = getDragBounds();
-            currentTranslateX = bounds.minX / 2;
-            currentTranslateY = bounds.minY / 2;
-            initialTranslateX = currentTranslateX;
-            initialTranslateY = currentTranslateY;
-            bgImage.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px)`;
-        }
-
-        // 當圖片載入完成或視窗縮放時重新計算置中
-        if (bgImage.complete) initImagePosition();
-        else bgImage.addEventListener('load', initImagePosition);
-        window.addEventListener('resize', initImagePosition);
-
-        // 處理拖曳事件
-        function handleDragStart(x, y, target) {
-            // 新增：若點擊在按鈕或輸入框上，不觸發背景拖曳，以免影響 UI 互動
-            if (target && (target.closest('button') || target.closest('input') || target.closest('.pointer-events-auto'))) {
-                return;
-            }
-            isDragging = true;
-            bgImage.classList.add('grabbing');
-            startX = x;
-            startY = y;
-        }
-
-        function handleDragMove(x, y) {
-            if (!isDragging) return;
-            const dx = x - startX;
-            const dy = y - startY;
-            const bounds = getDragBounds();
+        // 動態計算圖片寬高，確保維持比例且無縫拼接
+        function resizeImage() {
+            const img = bgImages[0];
+            if (!img.naturalWidth) return;
             
-            // 計算新位置並限制在邊界內
-            currentTranslateX = Math.max(bounds.minX, Math.min(0, initialTranslateX + dx));
-            currentTranslateY = Math.max(bounds.minY, Math.min(0, initialTranslateY + dy));
+            const imgRatio = img.naturalWidth / img.naturalHeight;
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
             
-            bgImage.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px)`;
+            // 以螢幕高度為基準放大
+            let targetH = winH;
+            let targetW = targetH * imgRatio;
+            
+            // 避免螢幕過寬時圖片高度不足
+            if (targetW < winW) {
+                targetW = winW;
+                targetH = targetW / imgRatio;
+            }
+            
+            // 將尺寸套用到兩張圖片，確保大小一致
+            bgImages.forEach(image => {
+                image.style.width = targetW + 'px';
+                image.style.height = targetH + 'px';
+            });
+            
+            imageWidth = targetW;
         }
 
-        function handleDragEnd() {
-            if (isDragging) {
-                isDragging = false;
-                bgImage.classList.remove('grabbing');
-                initialTranslateX = currentTranslateX;
-                initialTranslateY = currentTranslateY;
+        if (bgImages[0].complete) resizeImage();
+        bgImages[0].addEventListener('load', resizeImage);
+        window.addEventListener('resize', resizeImage);
+
+        // 使用 requestAnimationFrame 達到最滑順的 60fps 旋轉動畫
+        function animatePan() {
+            if (imageWidth > 0) {
+                currentX -= panSpeed; // 向左旋轉
+                
+                // 當第一張圖完全移出畫面時，無縫跳回原點，達到無限 360 度旋轉錯覺
+                if (currentX <= -imageWidth) {
+                    currentX += imageWidth;
+                }
+                bgPanLayer.style.transform = `translate3d(${currentX}px, 0, 0)`;
             }
+            requestAnimationFrame(animatePan);
         }
+        animatePan();
 
-        // 綁定滑鼠事件 (改綁定到 window 確保滑動順暢)
-        window.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY, e.target));
-        window.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                e.preventDefault(); 
-                handleDragMove(e.clientX, e.clientY);
-            }
-        }, { passive: false });
-        window.addEventListener('mouseup', handleDragEnd);
-
-        // 綁定觸控事件 (改綁定到 window 並使用 passive: false 確保完全接管手勢)
-        window.addEventListener('touchstart', (e) => {
-            handleDragStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
-        }, { passive: false });
-        
-        window.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                e.preventDefault(); // 防止手機預設的頁面滾動與下拉重整
-                handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-        
-        window.addEventListener('touchend', handleDragEnd);
-        window.addEventListener('touchcancel', handleDragEnd);
-
+        // ==========================================
+        //  UI 互動隱藏邏輯
+        // ==========================================
         let uiTimer;
         const ui = document.getElementById('ui-layer');
         
@@ -343,7 +301,7 @@
         window.addEventListener('touchstart', dimUI, {passive: true});
         window.addEventListener('touchend', restoreUI);
 
-        // 環境恐懼震動與閃爍 (套用到 bg-container 而非 a-scene)
+        // 環境恐懼震動與閃爍 (套用到 bg-container)
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
             const sceneContainer = document.getElementById('bg-container');
