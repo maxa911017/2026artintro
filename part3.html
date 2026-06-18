@@ -7,17 +7,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* 針對手機動態高度的變數 */
         :root {
             --vh: 1vh;
         }
 
+        * {
+            /* 全局套用 manipulation，由瀏覽器原生阻擋雙擊放大，保證按鈕點擊零延遲 */
+            touch-action: manipulation; 
+        }
+
         html, body {
-            height: 100vh; /* 老舊瀏覽器備用 */
-            height: calc(var(--vh, 1vh) * 100); /* 絕對鎖死實際可視高度，無視網址列縮放 */
+            height: 100vh;
+            height: calc(var(--vh, 1vh) * 100);
             width: 100vw;
             overflow: hidden; 
-            overscroll-behavior: none; /* 徹底阻斷瀏覽器邊緣的回彈效果 */
+            overscroll-behavior: none;
             background-color: #F0F2F5;
             font-family: 'Noto Sans TC', sans-serif;
             -webkit-user-select: none;
@@ -28,7 +32,6 @@
         .font-serif-tc { font-family: 'Noto Serif TC', serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
 
-        /* CRT 掃描線特效 (平時隱形，被駭時出現) */
         .crt-overlay {
             position: absolute;
             inset: 0;
@@ -47,13 +50,12 @@
             background-color: #F0F2F5;
             transition: transform 0.5s, filter 0.5s;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch; /* 確保 iOS 上滑動順暢 */
-            overscroll-behavior-y: none; /* 鎖死下拉重整 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: none;
             padding-bottom: calc(2rem + env(safe-area-inset-bottom));
             touch-action: pan-y; /* 僅允許上下滑動 */
         }
 
-        /* 終端機層 */
         #terminal-layer {
             position: absolute;
             bottom: 0;
@@ -72,7 +74,6 @@
             flex-direction: column;
         }
 
-        /* 對話框動畫 */
         .msg-bubble {
             animation: slideInFade 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
@@ -81,7 +82,6 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* RGB色散與撕裂特效 (Glitch) */
         .severe-glitch {
             animation: rgbSplit 0.2s infinite alternate, tearScreen 1s infinite;
         }
@@ -97,7 +97,6 @@
             80% { clip-path: inset(80% -20px 5% 0); transform: translateX(3px); }
         }
 
-        /* 爆炸白屏 */
         .whiteout {
             position: absolute;
             inset: 0;
@@ -108,10 +107,9 @@
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.1s ease-in; /* 極快的閃白 */
+            transition: opacity 0.1s ease-in;
         }
 
-        /* 隨機生成的「騙人」文字 */
         .liar-text {
             position: absolute;
             color: #ff0000;
@@ -126,7 +124,6 @@
             to { transform: scale(1); opacity: 1; }
         }
 
-        /* 血色漸層背景（逐漸失控） */
         #blood-bg {
             position: absolute;
             inset: 0;
@@ -137,25 +134,23 @@
             transition: opacity 5s linear;
         }
 
-        /* 手機按鈕即時回饋，無延遲 */
+        /* 增強按鈕點擊手感 */
         button {
-            touch-action: manipulation;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent; /* 移除點擊時的藍色閃爍 */
         }
     </style>
 </head>
 <body>
 
-    <!-- 啟動前導頁 -->
     <div id="start-screen" class="absolute inset-0 bg-white z-[100] flex flex-col items-center justify-center p-6 text-center transition-opacity duration-500">
         <h1 class="font-serif-tc text-4xl font-black text-black tracking-widest mb-2">太平日報</h1>
         <p class="text-xs text-gray-500 tracking-[0.3em] mb-12 uppercase">安全・真實・穩定</p>
-        <button id="btn-start" class="w-full max-w-xs border border-black text-black font-bold py-4 rounded-sm tracking-widest active:bg-gray-100 transition-colors">
+        <button id="btn-start" onclick="void(0);" class="w-full max-w-xs border border-black text-black font-bold py-4 rounded-sm tracking-widest active:bg-gray-100 transition-colors">
             同意接收官方訊號
         </button>
     </div>
 
-    <!-- 正常新聞畫面 -->
     <div id="news-layer">
         <header class="sticky top-0 w-full bg-white shadow-sm z-20" style="padding-top: env(safe-area-inset-top);">
             <div class="px-5 py-4 flex justify-between items-center">
@@ -182,8 +177,7 @@
                 「天空的顏色本來就是灰灰紅紅的，請家長如此教導孩童，切勿驚慌。」發言人表示。
             </p>
             
-            <!-- 觸發按鈕偽裝成新聞推播 -->
-            <button id="trigger-hack" class="w-full relative overflow-hidden bg-red-50 py-4 border border-red-200 rounded transition-all duration-300">
+            <button id="trigger-hack" onclick="void(0);" class="w-full relative overflow-hidden bg-red-50 py-4 border border-red-200 rounded transition-all duration-300">
                 <div class="text-red-600 text-sm font-bold tracking-widest flex items-center justify-center">
                     <span class="mr-2">⚠️</span> 偵測到周邊異常訊號，點擊排除
                 </div>
@@ -191,26 +185,20 @@
         </main>
     </div>
 
-    <!-- 特效層 -->
     <div id="blood-bg"></div>
     <div class="crt-overlay" id="crt"></div>
 
-    <!-- 終端機層 -->
     <div id="terminal-layer">
         <div class="bg-black text-red-500 px-4 py-3 text-xs font-mono flex justify-between items-center border-b border-red-900 shadow-md shadow-red-900/20">
             <span>SYS_OVERRIDE // 未授權的攔截</span>
             <span class="animate-pulse">REC 🔴</span>
         </div>
-        
         <div id="chat-container" class="flex-1 p-5 overflow-y-auto font-sans text-sm space-y-5 pb-20 relative">
-            <!-- Messages go here -->
         </div>
     </div>
 
-    <!-- 滿版騙人生成區 -->
     <div id="liar-spawner" class="absolute inset-0 pointer-events-none z-[9000] overflow-hidden"></div>
 
-    <!-- 終極白畫面 -->
     <div id="whiteout" class="whiteout">
         <div id="reboot-msg" class="text-center opacity-0 transition-opacity duration-1000">
             <h2 class="font-serif-tc text-3xl font-black text-black mb-6 tracking-[0.5em] ml-[0.5em]">系統淨化完成</h2>
@@ -223,7 +211,7 @@
     </div>
 
     <script>
-        //        function setViewportHeight() {
+        function setViewportHeight() {
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
         }
@@ -231,28 +219,22 @@
         window.addEventListener('orientationchange', setViewportHeight);
         setViewportHeight();
 
-        // 鎖死多餘的滑動放大手勢
+        // 僅阻擋多指手勢(如雙指縮放)，不再阻擋正常的單指點擊(click)
         document.addEventListener('touchmove', function (event) {
-            if (event.scale !== 1) { event.preventDefault(); }
+            if (event.touches.length > 1) { 
+                event.preventDefault(); 
+            }
         }, { passive: false });
 
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function (event) {
-            let now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) { event.preventDefault(); }
-            lastTouchEnd = now;
-        }, { passive: false });
-
-        //        let audioCtx, heartbeatOsc, heartbeatGain, tinnitusOsc, tinnitusGain;
+        let audioCtx, heartbeatOsc, heartbeatGain, tinnitusOsc, tinnitusGain;
         let heartbeatInterval;
-        let heartRate = 1500; // 初始心跳間隔 (平緩)
+        let heartRate = 1500; 
 
         function initAudio() {
             if(audioCtx) return;
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AudioContext();
             
-            // 心跳聲設定
             heartbeatOsc = audioCtx.createOscillator();
             heartbeatGain = audioCtx.createGain();
             heartbeatOsc.type = 'sine';
@@ -263,7 +245,6 @@
             heartbeatGain.connect(audioCtx.destination);
             heartbeatOsc.start();
 
-            // 耳鳴聲設定
             tinnitusOsc = audioCtx.createOscillator();
             tinnitusGain = audioCtx.createGain();
             tinnitusOsc.type = 'sine';
@@ -275,7 +256,7 @@
             tinnitusOsc.start();
         }
 
-        //        function playHeartbeat() {
+        function playHeartbeat() {
             if(!audioCtx) return;
             const now = audioCtx.currentTime;
             heartbeatGain.gain.setValueAtTime(0, now);
@@ -295,7 +276,7 @@
             clearTimeout(heartbeatInterval);
         }
 
-        //        const chars = '█▓▒░$%&!#@*^~?><▌▐▀▄';
+        const chars = '█▓▒░$%&!#@*^~?><▌▐▀▄';
         async function scrambleText(element, finalString, duration = 800) {
             const start = Date.now();
             const originalLength = Math.max(element.innerText.length, finalString.length);
@@ -325,15 +306,7 @@
             });
         }
 
-        //        document.getElementById('btn-start').addEventListener('click', () => {
-            initAudio(); // 取得使用者的音效與震動授權
-            document.getElementById('start-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('start-screen').style.pointerEvents = 'none';
-            }, 500);
-        });
-
-        //        const chatBox = document.getElementById('chat-container');
+        const chatBox = document.getElementById('chat-container');
         function appendMsg(type, text, id=null) {
             const wrapper = document.createElement('div');
             wrapper.className = `msg-bubble flex ${type === 'sys' ? 'justify-center' : 'justify-start w-full'}`;
@@ -355,8 +328,18 @@
             return content;
         }
 
-        //        let isHacking = false;
+        // 第一個按鈕：進入系統
+        document.getElementById('btn-start').addEventListener('click', () => {
+            initAudio(); 
+            document.getElementById('start-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('start-screen').style.pointerEvents = 'none';
+            }, 500);
+        });
+
+        let isHacking = false;
         
+        // 第二個按鈕：觸發劇本
         document.getElementById('trigger-hack').addEventListener('click', () => {
             if(isHacking) return;
             isHacking = true;
@@ -366,7 +349,7 @@
             triggerBtn.classList.add('bg-red-900', 'text-white', 'border-red-900');
             document.getElementById('crt').style.opacity = '1';
             
-            playHeartbeat(); // 啟動心跳
+            playHeartbeat(); 
 
             setTimeout(() => {
                 document.getElementById('terminal-layer').style.transform = 'translateY(0)';
@@ -374,12 +357,10 @@
                 document.getElementById('news-layer').style.filter = 'blur(5px) grayscale(0.8)';
                 document.getElementById('blood-bg').style.opacity = '1';
                 
-                // 呼叫主要序列腳本
                 runSequence();
             }, 800);
         });
 
-        //        // 這個 async function 剛才不小心遺失了，這是讓時間軸能運作的核心
         async function runSequence() {
             const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -448,25 +429,22 @@
             }, 40);
         }
 
-        //        function triggerExplosion() {
+        function triggerExplosion() {
             // 1. 極限震動與閃光
             if(navigator.vibrate) navigator.vibrate([300, 100, 500, 100, 1000]);
             
-            // 耳鳴開到最大
             if(audioCtx) {
                 tinnitusGain.gain.setValueAtTime(1, audioCtx.currentTime);
             }
 
-            // 隱藏背後的新聞與終端機
             document.getElementById('terminal-layer').style.display = 'none';
             document.getElementById('news-layer').style.display = 'none';
             
-            // 顯示全白畫面
             const whiteout = document.getElementById('whiteout');
-            whiteout.style.backgroundColor = "white"; // 確保一開始是白的
+            whiteout.style.backgroundColor = "white"; 
             whiteout.style.opacity = '1';
 
-            // 2. 爆炸後 2 秒，耳鳴漸漸消失，浮現粉飾太平的字
+            // 2. 爆炸後 2 秒，浮現粉飾太平的字
             setTimeout(() => {
                 if(audioCtx) {
                     tinnitusGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
@@ -474,25 +452,20 @@
                 document.getElementById('reboot-msg').style.opacity = '1';
             }, 2000);
 
-            // 3. 【跳轉機制加在這裡】爆炸後 7 秒 (2秒白畫面 + 5秒文字停留)
+            // 3. 爆炸後 7 秒 (2秒白畫面 + 5秒文字停留)，準備跳轉
             setTimeout(() => {
-                // 文字消失，畫面被血紅色吞噬
                 document.getElementById('reboot-msg').style.opacity = '0';
                 whiteout.style.transition = "background-color 1.5s ease-in";
-                whiteout.style.backgroundColor = "#5a0000"; // 深血紅色
+                whiteout.style.backgroundColor = "#5a0000"; 
                 
-                // 伴隨一陣沉悶的死寂震動
                 if(navigator.vibrate) navigator.vibrate(800);
 
-                // 4. 紅色吞噬完成後 (1.5秒後)，強制跳轉回首頁
+                // 4. 紅色吞噬完成後，強制跳轉回首頁
                 setTimeout(() => {
-                    // 如果你的主檔案名稱叫做 index.html，就用這行：
                     window.location.href = 'index.html'; 
-                    
-                    // (如果你只有這一個檔案，也可以直接寫 window.location.reload(); 讓它重新整理)
                 }, 1500);
 
-            }, 7000); // 2000ms + 5000ms
+            }, 7000); 
         }
     </script>
 </body>
