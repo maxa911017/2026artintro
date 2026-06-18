@@ -284,11 +284,11 @@
             let isCorrect = false;
 
             // 判斷五個章節對應的密碼
-            if (pendingChapter === 1 && pwd === '12') isCorrect = true;
-            else if (pendingChapter === 2 && pwd === '11') isCorrect = true;
+            if (pendingChapter === 1 && pwd === '11') isCorrect = true;
+            else if (pendingChapter === 2 && pwd === '12') isCorrect = true;
             else if (pendingChapter === 3 && pwd === '13') isCorrect = true;
             else if (pendingChapter === 4 && pwd === '14') isCorrect = true;
-            else if (pendingChapter === 5 && pwd === '05') isCorrect = true; // 新增第五章判斷
+            else if (pendingChapter === 5 && pwd === '15') isCorrect = true; // 新增第五章判斷
 
             if (isCorrect) {
                 let unlockedChapter = pendingChapter;
