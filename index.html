@@ -28,11 +28,10 @@
             overflow: hidden; 
             overscroll-behavior: none;
             user-select: none;
-            touch-action: none; /* 新增：徹底禁用預設手勢，確保手機滑動不會被中斷 */
+            touch-action: none; 
             -webkit-user-select: none;
         }
 
-        /* 拖曳背景容器 */
         #bg-container {
             position: fixed; inset: 0;
             width: 100vw; height: 100vh;
@@ -40,7 +39,6 @@
             z-index: 1;
         }
 
-        /* 自動旋轉層 */
         #bg-pan-layer {
             display: flex;
             position: absolute;
@@ -49,7 +47,6 @@
             height: 100%;
         }
         
-        /* 圖片本身不設定寬高，由 JS 動態計算以確保無縫拼接 */
         .bg-image {
             display: block;
             max-width: none;
@@ -129,7 +126,6 @@
 
     <audio id="bg-audio" src="music.mp3" loop="true" preload="auto" crossorigin="anonymous"></audio>
 
-    <!-- 可自動 360 度旋轉的背景層 (無縫拼接) -->
     <div id="bg-container">
         <div id="bg-pan-layer">
             <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
@@ -137,21 +133,18 @@
         </div>
     </div>
 
-    <!-- 環境火光與特效 -->
     <div class="fire-glow"></div>
     <canvas id="fire-canvas" class="fixed inset-0 z-[5] pointer-events-none"></canvas>
     <div class="vignette"></div>
     <div class="noise-overlay"></div>
     <div id="flicker-layer" class="flicker-overlay"></div>
 
-    <!-- UI 選單層 -->
     <div id="ui-layer">
         <header class="text-left drop-shadow-2xl">
             <h1 class="text-2xl md:text-4xl font-light tracking-[0.4em] text-gray-200">煙霧中長大的孩子</h1>
             <h2 class="text-xs md:text-sm text-gray-400 tracking-[0.3em] font-light mt-2">防空洞裡學會的事</h2>
         </header>
 
-        <!-- 左下角資訊按鈕 -->
         <div class="absolute bottom-6 left-6 flex flex-col items-start gap-4 pointer-events-auto">
             <button onclick="showInfo('concept')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">劇本概念</button>
             <button onclick="showInfo('team')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">製作團隊</button>
@@ -166,10 +159,10 @@
         </nav>
     </div>
 
-    <!-- 密碼解鎖對話框 -->
     <div id="password-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
         <div class="text-center bg-black/60 p-8 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-            <h3 class="text-gray-300 tracking-[0.3em] font-light mb-6 text-sm md:text-base">此記憶已封印，請輸入解鎖密碼</h3>
+            <!-- 加入 ID 讓 JavaScript 可以動態修改這段文字 -->
+            <h3 id="password-hint" class="text-gray-300 tracking-[0.3em] font-light mb-6 text-sm md:text-base">此記憶已封印，請輸入解鎖密碼</h3>
             <input type="password" id="chapter-password" 
                    class="bg-transparent border-b border-gray-600 text-white text-center text-xl tracking-[0.5em] outline-none px-4 py-2 mb-2 w-48 focus:border-red-800 transition-colors"
                    autocomplete="off">
@@ -181,7 +174,6 @@
         </div>
     </div>
 
-    <!-- 資訊彈出視窗 -->
     <div id="info-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
         <div class="bg-black/80 p-8 md:p-12 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-2xl w-[85%] relative text-center">
             <button onclick="closeInfo()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors text-xl">✕</button>
@@ -190,16 +182,13 @@
         </div>
     </div>
 
-    <!-- 切換章節黑幕 -->
     <div id="theater-curtain"></div>
 
     <script>
-        // 網頁載入後直接初始化體驗
         window.addEventListener('DOMContentLoaded', () => {
             const bgAudio = document.getElementById('bg-audio');
             bgAudio.volume = 0.55;
             
-            // 嘗試自動播放背景音樂
             const attemptPlay = () => {
                 const playPromise = bgAudio.play();
                 if (playPromise !== undefined) {
@@ -223,17 +212,13 @@
             startFearFlicker();
         });
 
-        // ==========================================
-        //  自動 360 度環景旋轉邏輯 (無縫拼接)
-        // ==========================================
         const bgPanLayer = document.getElementById('bg-pan-layer');
         const bgImages = document.querySelectorAll('.bg-image');
         
-        let panSpeed = 0.35; // 控制旋轉速度 (數值越大轉越快，0.35 是緩慢沉浸的速度)
+        let panSpeed = 0.35; 
         let currentX = 0;
         let imageWidth = 0;
 
-        // 動態計算圖片寬高，確保維持比例且無縫拼接
         function resizeImage() {
             const img = bgImages[0];
             if (!img.naturalWidth) return;
@@ -242,17 +227,14 @@
             const winW = window.innerWidth;
             const winH = window.innerHeight;
             
-            // 以螢幕高度為基準放大
             let targetH = winH;
             let targetW = targetH * imgRatio;
             
-            // 避免螢幕過寬時圖片高度不足
             if (targetW < winW) {
                 targetW = winW;
                 targetH = targetW / imgRatio;
             }
             
-            // 將尺寸套用到兩張圖片，確保大小一致
             bgImages.forEach(image => {
                 image.style.width = targetW + 'px';
                 image.style.height = targetH + 'px';
@@ -265,12 +247,10 @@
         bgImages[0].addEventListener('load', resizeImage);
         window.addEventListener('resize', resizeImage);
 
-        // 使用 requestAnimationFrame 達到最滑順的 60fps 旋轉動畫
         function animatePan() {
             if (imageWidth > 0) {
-                currentX -= panSpeed; // 向左旋轉
+                currentX -= panSpeed; 
                 
-                // 當第一張圖完全移出畫面時，無縫跳回原點，達到無限 360 度旋轉錯覺
                 if (currentX <= -imageWidth) {
                     currentX += imageWidth;
                 }
@@ -280,28 +260,11 @@
         }
         animatePan();
 
-        // ==========================================
-        //  UI 互動隱藏邏輯
-        // ==========================================
-        let uiTimer;
         const ui = document.getElementById('ui-layer');
-        
-        function dimUI(e) {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            ui.style.opacity = '0.08';
-            clearTimeout(uiTimer);
-        }
-        function restoreUI(e) {
-            if(e.target.closest('#password-modal') || e.target.closest('#info-modal')) return;
-            uiTimer = setTimeout(() => ui.style.opacity = '1', 1800);
-        }
 
-        window.addEventListener('mousedown', dimUI);
-        window.addEventListener('mouseup', restoreUI);
-        window.addEventListener('touchstart', dimUI, {passive: true});
-        window.addEventListener('touchend', restoreUI);
+        // 已移除點擊空白處時 UI 會變暗消失的程式碼
+        // 讓使用者隨意點擊都不會干擾文字顯示
 
-        // 環境恐懼震動與閃爍 (套用到 bg-container)
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
             const sceneContainer = document.getElementById('bg-container');
@@ -319,6 +282,15 @@
 
         let pendingChapter = null;
 
+        // 定義每個章節的專屬提示文字（可以自行修改這裡的文字）
+        const chapterHints = {
+            1: "黑暗中，躲避腳步聲的規則是什麼？",
+            2: "抬頭望向天空，灰燼之下藏著什麼？",
+            3: "大人們極力掩蓋的，究竟是什麼真相？",
+            4: "防空洞搖晃的夜晚，你還記得那份恐懼嗎？",
+            5: "手中緊握的紙飛機，它想飛往何方？"
+        };
+
         function executeChapter(num) {
             openPasswordModal(num);
         }
@@ -326,16 +298,25 @@
         function openPasswordModal(num) {
             pendingChapter = num;
             const modal = document.getElementById('password-modal');
+            
+            // 動態更新上方的提示說明
+            const hintElement = document.getElementById('password-hint');
+            hintElement.innerText = chapterHints[num] || "此記憶已封印，請輸入解鎖密碼";
+
             modal.classList.remove('opacity-0', 'pointer-events-none');
             document.getElementById('chapter-password').value = '';
             document.getElementById('pwd-error').classList.add('opacity-0');
             setTimeout(() => document.getElementById('chapter-password').focus(), 100);
+            
+            // 打開視窗時讓背景選單變暗以突顯視窗
+            ui.style.opacity = '0.08';
         }
 
         function closePasswordModal() {
             const modal = document.getElementById('password-modal');
             modal.classList.add('opacity-0', 'pointer-events-none');
             pendingChapter = null;
+            // 關閉視窗時恢復背景選單亮度
             ui.style.opacity = '1'; 
         }
 
@@ -382,12 +363,14 @@
             }
 
             modal.classList.remove('opacity-0', 'pointer-events-none');
+            // 打開資訊時稍微暗化背景 UI
             ui.style.opacity = '0.08';
         }
 
         function closeInfo() {
             const modal = document.getElementById('info-modal');
             modal.classList.add('opacity-0', 'pointer-events-none');
+            // 恢復 UI 亮度
             ui.style.opacity = '1';
         }
 
@@ -465,7 +448,7 @@
                 this.life -= this.decay;
                 this.size *= 0.95; 
 
-                if (this.life <= 0 || this.size <= 1) {
+            if (this.life <= 0 || this.size <= 1) {
                     this.reset();
                 }
             }
