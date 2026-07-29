@@ -2,206 +2,266 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>藝穗節互動：希望的紙飛機</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <style>
-    /* 重置與防跑版設定 */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;300;400;700&display=swap');
+    
     body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #050505;
-      overflow: hidden;
-      font-family: "PingFang TC", "Helvetica Neue", sans-serif;
-      touch-action: none;
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background-color: #020203; overflow: hidden;
+      font-family: 'Noto Serif TC', "PingFang TC", serif;
+      touch-action: none; user-select: none; -webkit-user-select: none;
     }
 
     #panorama-bg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 200%;
-      height: 100%;
+      position: absolute; top: 0; left: 0; width: 200%; height: 100%;
       background-image: url('back.jpg'); 
-      background-size: 50% 100%;
-      background-repeat: repeat-x;
-      background-position: left center;
-      z-index: 0;
-      opacity: 0.25;
+      background-size: 50% 100%; background-repeat: repeat-x;
+      background-position: left center; z-index: 0; opacity: 0.1;
       animation: pan360 90s linear infinite;
-      transition: filter 3s ease-in-out, opacity 3s ease-in-out;
+      transition: filter 3s ease-in-out, opacity 4s ease-in-out;
     }
+    .panorama-hope { opacity: 0.3 !important; filter: brightness(1.5) contrast(1.2); }
+    .panorama-flying { filter: blur(8px) brightness(2); opacity: 0.5 !important; }
 
-    .panorama-flying {
-      filter: blur(8px) brightness(1.8);
-      opacity: 0.5 !important;
-    }
+    @keyframes pan360 { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    @keyframes pan360 {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-
-    /* --- UI 淡入淡出與縮放變形 --- */
-    .fade-transition { transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
-    .step-hidden { opacity: 0; pointer-events: none; transform: translateY(20px) scale(0.95); }
-    .step-active { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+    #bgCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
     
-    .folding-out { opacity: 0; pointer-events: none; transform: translateY(50px) scale(0.5) rotateX(45deg); transition: all 1s ease-in; }
+    /* 灰燼圖層 (供使用者刮開) */
+    #dust-canvas {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 30; opacity: 0; pointer-events: none; transition: opacity 2s ease;
+    }
 
-    /* --- 紙飛機專區 --- */
+    #wandering-spark {
+      position: absolute; width: 20px; height: 20px; border-radius: 50%;
+      background: #fff; box-shadow: 0 0 30px 15px rgba(255, 200, 100, 0.8), inset 0 0 10px rgba(255,255,255,1);
+      transform: translate(-50%, -50%); z-index: 25; opacity: 0; pointer-events: none;
+      transition: opacity 1s ease;
+    }
+    .spark-floating { animation: floatSpark 3s ease-in-out infinite; }
+    @keyframes floatSpark { 0%, 100% { margin-top: 0; margin-left: 0; } 25% { margin-top: -10px; margin-left: 10px; } 50% { margin-top: 5px; margin-left: 15px; } 75% { margin-top: 15px; margin-left: -5px; } }
+
+    #center-light {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 2px; height: 2px; box-shadow: 0 0 100px 50px rgba(255, 220, 150, 0);
+      transition: box-shadow 3s ease-in-out; z-index: 15; pointer-events: none;
+    }
+    .light-revealed { box-shadow: 0 0 150px 80px rgba(255, 200, 120, 0.2) !important; }
+    .light-gathering { box-shadow: 0 0 250px 150px rgba(255, 220, 150, 0.5) !important; }
+    .light-active { box-shadow: 0 0 450px 300px rgba(200, 230, 255, 0.7) !important; }
+
+    #interaction-ring {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 60px; height: 60px; border-radius: 50%; 
+      border: 1px solid rgba(255, 220, 150, 0.2);
+      pointer-events: none; display: none; z-index: 35; 
+      transition: box-shadow 0.2s, width 0.2s, height 0.2s, background-color 0.2s;
+    }
+
+    /* 新增：中央微光接收環 */
+    #center-receptacle {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 120px; height: 120px; border-radius: 50%;
+      border: 1px dashed rgba(255, 255, 255, 0.3);
+      z-index: 20; opacity: 0; pointer-events: none;
+      transition: opacity 1s, transform 0.2s, border-color 0.2s;
+      animation: rotateReceptacle 15s linear infinite;
+    }
+    @keyframes rotateReceptacle {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* 新增：微光呼吸閃爍特效 */
+    .spark-breathing {
+      animation: sparkBreathe 1.5s ease-in-out infinite alternate !important;
+    }
+    @keyframes sparkBreathe {
+      0% { box-shadow: 0 0 20px 10px rgba(255, 150, 50, 0.6), inset 0 0 8px rgba(255,255,255,0.8); }
+      100% { box-shadow: 0 0 40px 20px rgba(255, 200, 80, 0.9), inset 0 0 12px rgba(255,255,255,1); }
+    }
+
+    #ui-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 40; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; pointer-events: none;
+    }
+
+    .text-block {
+      color: #fff; text-align: center; visibility: hidden; opacity: 0;
+      transition: opacity 2.5s ease-in-out, transform 2.5s ease-out, filter 1.5s ease;
+      transform: translate(-50%, calc(-50% + 15px));
+      position: absolute; top: 50%; left: 50%; width: 90%; max-width: 800px;
+      pointer-events: none; text-shadow: 0 4px 20px rgba(0,0,0,1);
+    }
+    .text-block.active { visibility: visible; opacity: 1; transform: translate(-50%, -50%); }
+
+    .text-fade { color: rgba(180, 180, 190, 0.9); }
+    .text-hope { color: rgba(255, 235, 200, 1); text-shadow: 0 0 25px rgba(255, 200, 100, 0.4); }
+    .text-peace { color: rgba(230, 245, 255, 1); text-shadow: 0 0 20px rgba(150, 200, 255, 0.5); }
+
+    #btn-enter {
+      pointer-events: auto; position: relative; background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2); color: #ddd; padding: 16px 45px;
+      border-radius: 40px; font-size: 1rem; letter-spacing: 6px; cursor: pointer;
+      transition: all 0.6s ease; backdrop-filter: blur(4px);
+    }
+    #btn-enter:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.15); }
+
+    .hint-text {
+      position: absolute; bottom: 15%; width: 100%; text-align: center;
+      color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; letter-spacing: 6px;
+      display: none; z-index: 50; animation: pulse-opacity 3s infinite; pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+    @keyframes pulse-opacity { 0%, 100% { opacity: 0.3; transform: scale(0.98); } 50% { opacity: 0.9; transform: scale(1); } }
+
+    #form-layer {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 100%; max-width: 400px; padding: 0 24px; z-index: 50;
+      opacity: 0; pointer-events: none; transition: opacity 1.5s ease;
+    }
+    .form-active { opacity: 1 !important; pointer-events: auto !important; }
+    .folding-out { opacity: 0 !important; pointer-events: none !important; transform: translate(-50%, -30%) scale(0.6) rotateX(45deg) !important; transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+
     #airplane-wrapper {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 50;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      padding-bottom: 20vh;
-      opacity: 0;
-      transition: opacity 1s ease-in-out;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 60; pointer-events: none; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end; padding-bottom: 25vh;
+      opacity: 0; transition: opacity 1.5s ease-in-out;
     }
-
-    .floating-plane {
-      animation: floatPlane 3s ease-in-out infinite;
-      filter: drop-shadow(0 0 20px rgba(200,230,255,0.6));
+    #airplane {
+      position: relative; filter: drop-shadow(0 0 15px rgba(200,230,255,0.4));
+      transition: transform 0.1s ease-out; 
     }
-
+    .floating-plane { animation: floatPlane 3s ease-in-out infinite; }
     @keyframes floatPlane {
       0% { transform: translateY(0px) rotateZ(-2deg) rotateX(10deg); }
       50% { transform: translateY(-15px) rotateZ(2deg) rotateX(5deg); }
       100% { transform: translateY(0px) rotateZ(-2deg) rotateX(10deg); }
     }
+    
+    .tension-shake { animation: shakeTension 0.1s infinite; filter: drop-shadow(0 0 30px rgba(255, 220, 150, 0.8)) !important; }
+    @keyframes shakeTension { 0% { margin-left: 0px; margin-top: 0px; } 25% { margin-left: -2px; margin-top: 2px; } 50% { margin-left: 2px; margin-top: -1px; } 75% { margin-left: -1px; margin-top: -2px; } 100% { margin-left: 0px; margin-top: 0px; } }
 
-    #throw-hint {
-      position: absolute;
-      bottom: 10vh;
-      color: rgba(255,255,255,0.6);
-      font-size: 0.8rem;
-      letter-spacing: 0.3em;
-      pointer-events: none;
-      animation: pulseHint 2s infinite;
-    }
-
-    @keyframes pulseHint {
-      0% { opacity: 0.3; transform: translateY(0); }
-      50% { opacity: 0.8; transform: translateY(-10px); }
-      100% { opacity: 0.3; transform: translateY(0); }
-    }
-
-    .fly-animation {
-      animation: aerodynamicFly 4s cubic-bezier(0.3, 0.0, 0.2, 1) forwards;
-    }
-
+    .fly-animation { animation: aerodynamicFly 3s cubic-bezier(0.3, 0.0, 0.2, 1) forwards !important; }
     @keyframes aerodynamicFly {
-      0% { transform: translateY(0) scale(1.2) rotateX(10deg) rotateZ(0deg); opacity: 1; filter: blur(0px); }
-      15% { transform: translateY(-150px) translateX(-30px) scale(0.9) rotateX(30deg) rotateZ(-15deg); opacity: 1; filter: blur(0px); }
-      40% { transform: translateY(-300px) translateX(20px) scale(0.6) rotateX(10deg) rotateZ(10deg); filter: blur(1px); }
-      70% { transform: translateY(-450px) translateX(-10px) scale(0.3) rotateX(40deg) rotateZ(-5deg); opacity: 0.8; filter: blur(2px); }
-      100% { transform: translateY(-600px) translateX(0) scale(0) rotateX(10deg) rotateZ(0deg); opacity: 0; filter: blur(5px); }
+      0% { transform: translateY(var(--start-y, 0)) scale(1.2) rotateX(10deg); opacity: 1; filter: blur(0px); }
+      15% { transform: translateY(-150px) translateX(-20px) scale(0.9) rotateX(30deg) rotateZ(-10deg); }
+      40% { transform: translateY(-350px) translateX(15px) scale(0.6) rotateX(10deg) rotateZ(5deg); filter: blur(1px); }
+      100% { transform: translateY(-800px) translateX(0) scale(0) rotateX(10deg) rotateZ(0deg); opacity: 0; filter: blur(4px); }
     }
 
-    /* 中央微光 */
-    #center-light {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 2px;
-      height: 2px;
-      box-shadow: 0 0 100px 50px rgba(200, 230, 255, 0);
-      transition: box-shadow 4s ease-in-out;
-      z-index: 10;
-      pointer-events: none;
+    #slingshot-line {
+      position: absolute; bottom: 25vh; left: 50%; transform: translateX(-50%);
+      width: 2px; height: 0px; background: linear-gradient(to top, rgba(255,200,100,0), rgba(255,255,255,0.6));
+      pointer-events: none; z-index: 55; opacity: 0; transition: opacity 0.3s;
     }
-    .light-active { box-shadow: 0 0 350px 250px rgba(200, 230, 255, 0.5) !important; }
 
-    /* 結尾白光 */
     #white-out {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background-color: #ffffff;
-      z-index: 100; opacity: 0; pointer-events: none;
-      transition: opacity 5s ease-in-out;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: #ffffff; z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 4s ease-in-out;
     }
     .white-out-active { opacity: 1 !important; }
   </style>
 </head>
-<body class="text-gray-200 selection:bg-red-900">
+<body class="selection:bg-gray-700">
 
+  <!-- 背景層 -->
   <div id="panorama-bg"></div>
-  <canvas id="bgCanvas" class="absolute top-0 left-0 w-full h-full z-10 pointer-events-none"></canvas>
+  <canvas id="bgCanvas"></canvas>
   <div id="center-light"></div>
+  <div id="interaction-ring"></div>
+  <div id="center-receptacle"></div>
+  
+  <!-- 引導微光層 -->
+  <div id="wandering-spark"></div>
+
+  <!-- 灰燼擦拭層 -->
+  <canvas id="dust-canvas"></canvas>
+
+  <div id="slingshot-line"></div>
   <div id="white-out"></div>
 
-  <!-- UI 容器 -->
-  <div class="relative z-30 w-full h-full flex flex-col items-center justify-center px-6 max-w-md mx-auto" id="ui-container">
-    
-    <!-- 步驟 0 -->
-    <div id="step-0" class="absolute w-full px-6 fade-transition step-active text-center tracking-[0.1em] sm:tracking-[0.2em] leading-loose">
-      <p class="text-gray-400 text-xs sm:text-sm animate-pulse mb-8 whitespace-nowrap">走在冰冷的長廊，盡頭沒有光。</p>
-      <p class="text-gray-300 text-xs sm:text-sm whitespace-nowrap">大人說，只要不出聲，惡魔飛機就找不到我們。</p>
-      <p class="text-gray-300 text-xs sm:text-sm whitespace-nowrap">但在黑暗裡，我們把恐懼，摺成了希望。</p>
-      <button id="btn-enter" class="mt-16 px-6 sm:px-8 py-3 border border-gray-600 rounded-full text-xs sm:text-sm hover:bg-gray-800 hover:border-gray-400 transition-all duration-500 tracking-widest text-gray-300 whitespace-nowrap">
-        進入記憶
-      </button>
+  <div id="ui-layer">
+    <!-- 起始畫面 -->
+    <div id="step-0" class="text-block active flex flex-col items-center">
+      <h1 class="text-3xl md:text-5xl font-light mb-6 tracking-[0.3em] ml-3" style="text-shadow: 0 0 30px rgba(255,255,255,0.4);">希望的紙飛機</h1>
+      <p class="text-xs md:text-sm text-gray-500 mb-16 tracking-widest font-light leading-relaxed">
+        沈浸式互動劇場體驗<br><br>
+        <span class="text-[10px] text-orange-200/60">為達最佳體驗，請開啟聲音、調高亮度<br>並允許手機震動與感測功能</span>
+      </p>
+      <button id="btn-enter">尋找微光</button>
     </div>
 
-    <!-- 步驟 1 -->
-    <div id="step-1" class="absolute w-full px-6 fade-transition step-hidden">
-      <form id="message-form" class="flex flex-col space-y-8 w-full">
-        <div class="text-center mb-4 space-y-2">
-          <h2 class="text-base sm:text-lg font-light tracking-[0.1em] sm:tracking-[0.15em] text-gray-100 drop-shadow-md whitespace-nowrap">如果戰爭的盡頭是希望</h2>
-          <p class="text-xs sm:text-sm text-gray-400 tracking-widest whitespace-nowrap">你想對愛的人說什麼？</p>
-        </div>
-
-        <div class="relative group">
-          <div class="absolute -inset-0.5 bg-gradient-to-r from-gray-700 to-gray-800 rounded-md blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-          <textarea id="input-message" placeholder="寫下你的思念..." class="relative w-full bg-black/60 backdrop-blur-md border border-gray-600 rounded-md pb-2 pt-4 px-4 text-gray-200 focus:outline-none focus:border-gray-400 transition-colors resize-none h-32 placeholder:text-gray-600 tracking-wider text-sm leading-relaxed shadow-inner"></textarea>
-        </div>
-
-        <div class="relative group">
-          <p class="text-[10px] sm:text-xs text-gray-500 mb-2 tracking-wider drop-shadow-md whitespace-nowrap">這份信件，將於半年後寄出。</p>
-          <div class="absolute -inset-0.5 bg-gradient-to-r from-gray-700 to-gray-800 rounded-md blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-          <input id="input-email" type="email" placeholder="收件人 Email" class="relative w-full bg-black/60 backdrop-blur-md border border-gray-600 rounded-md py-3 px-4 text-gray-200 focus:outline-none focus:border-gray-400 transition-colors placeholder:text-gray-600 tracking-wider text-sm shadow-inner" />
-        </div>
-
-        <button id="btn-submit" type="button" class="w-full py-4 mt-8 border border-gray-500 bg-white/10 backdrop-blur-md text-gray-200 rounded-md hover:bg-white/20 hover:text-white transition-all duration-500 tracking-[0.15em] sm:tracking-[0.2em] text-xs sm:text-sm flex items-center justify-center space-x-3 whitespace-nowrap shadow-lg">
-          <span id="btn-text">將信件摺疊起來</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <path d="M2 15h10"></path>
-            <path d="m9 18 3-3-3-3"></path>
-          </svg>
-        </button>
-      </form>
+    <!-- 劇情文字 -->
+    <div id="text-1" class="text-block">
+      <h2 class="text-lg md:text-2xl font-light tracking-[0.2em] leading-loose text-fade">轟鳴聲掩蓋了天空，<br>我們只能在黑暗中倒數。</h2>
+    </div>
+    <div id="text-2" class="text-block">
+      <h2 class="text-lg md:text-2xl font-light tracking-[0.2em] leading-loose text-fade">但在時代的厚重灰燼下，<br>似乎還掩埋著什麼...</h2>
+    </div>
+    <div id="text-3" class="text-block">
+      <h2 class="text-xl md:text-3xl font-light tracking-[0.2em] leading-loose text-hope">原來是一點微弱的思念。</h2>
+    </div>
+    <div id="text-4" class="text-block">
+      <h2 class="text-xl md:text-3xl font-light tracking-[0.2em] leading-loose text-hope">我們決定，將這份微光，<br>摺成希望。</h2>
     </div>
 
-    <!-- 步驟 3 -->
-    <div id="step-3" class="absolute w-full px-6 fade-transition step-hidden text-center tracking-[0.15em] sm:tracking-[0.2em] leading-loose drop-shadow-lg">
-      <p class="text-gray-100 mb-6 text-base sm:text-lg whitespace-nowrap">信件已投向遠方。</p>
-      <p class="text-gray-300 text-xs sm:text-sm whitespace-nowrap">那些轟炸與恐懼終將遠去。</p>
-      <p class="text-gray-300 text-xs sm:text-sm whitespace-nowrap">半年後，</p>
-      <p class="text-gray-100 text-xs sm:text-sm whitespace-nowrap">這份希望將會抵達。</p>
-      <div class="pt-20">
-        <p class="text-[10px] sm:text-xs text-gray-400 tracking-widest animate-pulse whitespace-nowrap">挺過之後一切都會變好的。</p>
-      </div>
+    <!-- 結局文字 -->
+    <div id="text-end" class="text-block pointer-events-none">
+      <h2 class="text-xl md:text-3xl font-light leading-loose text-peace mb-8">信件已投向遠方。</h2>
+      <p class="text-sm md:text-base text-gray-300 tracking-[0.2em] mb-4">那些轟炸與恐懼，終將成為過去。</p>
+      <p class="text-sm md:text-base text-gray-300 tracking-[0.2em] mb-8">半年後，這份希望將會抵達。</p>
+      <p class="text-xs text-gray-400 tracking-[0.4em] animate-pulse">挺過之後，一切都會變好的。</p>
     </div>
   </div>
 
-  <!-- 紙飛機等待投擲專區 -->
+  <!-- 互動提示 -->
+  <div id="hint-scratch" class="hint-text">在螢幕上滑動，撥開時代的灰燼</div>
+  <div id="hint-drag" class="hint-text text-orange-200/80">按住微光，將它引導至中心點燃</div>
+  <div id="hint-hold" class="hint-text text-orange-100">長按螢幕，匯聚希望的光芒</div>
+  <div id="hint-slingshot" class="hint-text text-gray-200" style="bottom: 15vh; z-index: 100;">▼ 按住紙飛機向下拉動蓄力 ▼</div>
+
+  <div id="form-layer">
+    <form id="message-form" class="flex flex-col space-y-6 w-full">
+      <div class="text-center mb-2 space-y-2">
+        <h2 class="text-base sm:text-lg font-light tracking-[0.15em] text-gray-100 drop-shadow-md">如果戰爭的盡頭是希望</h2>
+        <p class="text-xs sm:text-sm text-gray-400 tracking-widest">你想對愛的人說什麼？</p>
+      </div>
+      <div class="relative group">
+        <div class="absolute -inset-0.5 bg-gradient-to-r from-gray-700 to-gray-800 rounded-md blur opacity-30 group-hover:opacity-60 transition duration-1000"></div>
+        <textarea id="input-message" placeholder="寫下你的思念..." class="relative w-full bg-black/60 backdrop-blur-md border border-gray-600 rounded-md pb-2 pt-4 px-4 text-gray-200 focus:outline-none focus:border-gray-300 transition-colors resize-none h-32 placeholder:text-gray-500 tracking-wider text-sm shadow-inner"></textarea>
+      </div>
+      <div class="relative group">
+        <p class="text-[10px] text-gray-400 mb-2 tracking-wider drop-shadow-md">這份信件，將於半年後寄出。</p>
+        <div class="absolute -inset-0.5 bg-gradient-to-r from-gray-700 to-gray-800 rounded-md blur opacity-30 transition duration-1000"></div>
+        <input id="input-email" type="email" placeholder="收件人 Email" class="relative w-full bg-black/60 backdrop-blur-md border border-gray-600 rounded-md py-3 px-4 text-gray-200 focus:outline-none focus:border-gray-300 transition-colors placeholder:text-gray-500 tracking-wider text-sm shadow-inner" />
+      </div>
+      <button id="btn-submit" type="button" class="w-full py-4 mt-6 border border-gray-400 bg-white/10 backdrop-blur-md text-gray-100 rounded-md hover:bg-white/20 transition-all duration-500 tracking-[0.2em] text-sm flex items-center justify-center space-x-3 shadow-lg">
+        <span id="btn-text">將信件摺疊起來</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <path d="M2 15h10"></path>
+          <path d="m9 18 3-3-3-3"></path>
+        </svg>
+      </button>
+    </form>
+  </div>
+
   <div id="airplane-wrapper">
     <div id="airplane" class="floating-plane">
-      <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="75" height="75" viewBox="0 0 24 24" fill="rgba(255,255,255,0.95)" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
       </svg>
     </div>
-    <div id="throw-hint">▲ 向上滑動，將希望寄出 ▲</div>
   </div>
 
   <script type="module">
@@ -209,193 +269,130 @@
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- Firebase 初始化 ---
     const firebaseConfig = {
       apiKey: "AIzaSyD5_p-5RLRJbLLWRDbh7Im2lDTwqQgseRI",
       authDomain: "atr2026-b538a.firebaseapp.com",
       projectId: "atr2026-b538a",
       storageBucket: "atr2026-b538a.firebasestorage.app",
       messagingSenderId: "484101433417",
-      appId: "1:484101433417:web:659f1dba534ed90ae3b798",
-      measurementId: "G-XDCKP1ZZVZ"
+      appId: "1:484101433417:web:659f1dba534ed90ae3b798"
     };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     let currentUser = null;
-
-    const initAuth = async () => {
-      try { await signInAnonymously(auth); } catch (error) { console.warn("容錯模式:", error); }
-    };
-    initAuth();
+    signInAnonymously(auth).catch(() => {});
     onAuthStateChanged(auth, (user) => { currentUser = user; });
 
-    // ==========================================
-    // 劇院級音效合成系統 (Web Audio API)
-    // ==========================================
-    let audioCtx;
-    let bgmGain;
+    let bgDrone, droneFilter, hopePad, whooshSynth, chimeSynth, scratchNoise, tensionSynth, sparkSynth;
+    let isAudioReady = false;
 
-    // 1. 初始化音效引擎
-    function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+    async function initAudio() {
+      if(isAudioReady) return;
+      await Tone.start();
+
+      // 防空洞轟鳴
+      droneFilter = new Tone.Filter(200, "lowpass").toDestination();
+      bgDrone = new Tone.Noise("pink").connect(droneFilter);
+      bgDrone.volume.value = -12;
+
+      // 撥開灰燼的沙沙聲 (低頻加強，更有阻力感)
+      const scratchFilter = new Tone.Filter(800, "bandpass").toDestination();
+      scratchNoise = new Tone.Noise("brown").connect(scratchFilter);
+      scratchNoise.volume.value = -Infinity;
+      scratchNoise.start();
+
+      // 拖曳光點的輕盈音
+      sparkSynth = new Tone.Oscillator(800, "sine").toDestination();
+      sparkSynth.volume.value = -Infinity;
+      sparkSynth.start();
+
+      // 希望和弦 (史詩感)
+      const reverb = new Tone.Reverb(8).toDestination();
+      hopePad = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "sine" },
+        envelope: { attack: 3, decay: 2, sustain: 0.8, release: 6 }
+      }).connect(reverb);
+      hopePad.volume.value = -Infinity;
+
+      // 彈弓蓄力音效
+      tensionSynth = new Tone.Oscillator(150, "triangle").toDestination();
+      tensionSynth.volume.value = -Infinity;
+      tensionSynth.start();
+
+      // 投擲風聲與鐘聲
+      whooshSynth = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.1, decay: 1.5, sustain: 0, release: 0.1 } }).toDestination();
+      whooshSynth.volume.value = -2;
+
+      chimeSynth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.05, decay: 1, sustain: 0.2, release: 4 } }).connect(reverb);
+      chimeSynth.volume.value = -8;
+
+      isAudioReady = true;
     }
 
-    // 2. 播放防空洞低頻轟鳴 (持續播放)
-    function playBunkerDrone() {
-      const osc = audioCtx.createOscillator();
-      bgmGain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 55; // 極低的轟鳴頻率
-      
-      osc.connect(bgmGain);
-      bgmGain.connect(audioCtx.destination);
-      
-      // 緩慢淡入
-      bgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
-      bgmGain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 3);
-      osc.start();
-    }
-
-    // 3. 播放摺紙沙沙聲
-    function playFoldSound() {
-      const bufferSize = audioCtx.sampleRate * 0.15; // 0.15秒短促音
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1; // 白噪音
-      }
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = buffer;
-      
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.value = 1500; // 過濾掉低音，聽起來像紙張
-      
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-      
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      noise.start();
-    }
-
-    // 4. 播放風切聲與穿梭音 (滑動投擲時)
-    function playWhooshSound() {
-      const bufferSize = audioCtx.sampleRate * 4; // 4秒長的風聲
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = buffer;
-      
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.Q.value = 0.8;
-      
-      // 頻率掃描：模擬物體快速飛過的督卜勒效應
-      filter.frequency.setValueAtTime(200, audioCtx.currentTime);
-      filter.frequency.exponentialRampToValueAtTime(1500, audioCtx.currentTime + 1);
-      filter.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 3.5);
-      
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.7, audioCtx.currentTime + 1);
-      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 4);
-      
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      noise.start();
-    }
-
-    // 5. 播放希望和弦 (結尾時)
-    function playHopeChime() {
-      // 關閉低頻轟鳴
-      if(bgmGain) {
-        bgmGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
-      }
-
-      // C大調和弦 (C5, E5, G5)
-      const freqs = [523.25, 659.25, 783.99]; 
-      freqs.forEach((f, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = f;
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        // 階梯式發聲與綿長的殘響
-        gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.5 + i * 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 6);
-        
-        osc.start();
-        osc.stop(audioCtx.currentTime + 6);
+    let gyroOffsetX = 0, gyroOffsetY = 0;
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        if(e.gamma && e.beta) {
+          let gamma = Math.max(-45, Math.min(45, e.gamma)); 
+          let beta = Math.max(-45, Math.min(45, e.beta - 45)); 
+          gyroOffsetX = (gamma / 45) * 60; 
+          gyroOffsetY = (beta / 45) * 60;
+        }
       });
     }
 
-
-    // --- 3D 粒子星空 ---
     const canvas = document.getElementById('bgCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     let width, height;
     let particles = [];
-    const numParticles = 10000; 
-    let baseSpeed = 1.0, currentSpeed = baseSpeed, targetSpeed = baseSpeed;
-    let isFlying = false;  
+    const numParticles = 2000; 
+    let visualState = 'dark'; // dark, gathering, hope, flying
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width;
-      canvas.height = height;
+      width = window.innerWidth; height = window.innerHeight;
+      canvas.width = width; canvas.height = height;
     }
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('resize', resize); resize();
 
     for (let i = 0; i < numParticles; i++) {
       particles.push({
         x: (Math.random() - 0.5) * 4000, y: (Math.random() - 0.5) * 4000, z: Math.random() * 3000,
-        size: Math.random() * 1.5 + 0.3, isEmber: Math.random() > 0.85
+        size: Math.random() * 1.5 + 0.5, isEmber: Math.random() > 0.85
       });
     }
 
+    // 粒子渲染迴圈
     function renderCanvas() {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = `rgba(0, 0, 0, ${isFlying ? 0.6 : 0.25})`; 
+      // 根據階段切換背景色
+      if(visualState === 'flying') ctx.fillStyle = 'rgba(5, 10, 25, 0.4)';
+      else if(visualState === 'hope') ctx.fillStyle = 'rgba(10, 8, 5, 0.3)';
+      else ctx.fillStyle = 'rgba(2, 2, 3, 0.3)';
+      
       ctx.fillRect(0, 0, width, height);
       
-      ctx.globalCompositeOperation = 'source-over';
-      currentSpeed += (targetSpeed - currentSpeed) * 0.03;
-      const centerX = width / 2, centerY = height / 2, fov = 400; 
+      const centerX = width / 2 + gyroOffsetX, centerY = height / 2 + gyroOffsetY, fov = 400; 
 
       particles.forEach(p => {
-        p.z -= currentSpeed;
-        if (p.z <= 0) {
-          p.z = 3000; p.x = (Math.random() - 0.5) * 4000; p.y = (Math.random() - 0.5) * 4000;
-        }
+        if(visualState === 'gathering') { p.z -= 2.5; p.y -= 1; p.x *= 0.99; p.y *= 0.99; } // 粒子向中心匯聚
+        else if (visualState === 'flying') { p.z -= 10; p.y += 2; } 
+        else { p.z -= 0.5; }
+
+        if (p.z <= 0) { p.z = 3000; p.x = (Math.random() - 0.5) * 4000; p.y = (Math.random() - 0.5) * 4000; }
+        
         const scale = fov / p.z;
         const screenX = centerX + p.x * scale, screenY = centerY + p.y * scale;
         const opacity = Math.min((3000 - p.z) / 1000, 1);
         const radius = Math.max(p.size * scale, 0.1);
 
         if (screenX > 0 && screenX < width && screenY > 0 && screenY < height) {
-          ctx.beginPath();
-          ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-          if (isFlying) {
-            ctx.fillStyle = `rgba(220, 240, 255, ${opacity * 0.9})`;
+          ctx.beginPath(); ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+          if (visualState === 'dark') {
+             ctx.fillStyle = p.isEmber ? `rgba(180, 50, 30, ${opacity * 0.7})` : `rgba(80, 80, 80, ${opacity * 0.4})`;
+          } else if (visualState === 'gathering') {
+             ctx.fillStyle = `rgba(255, 200, 100, ${opacity * 0.9})`;
           } else {
-            ctx.fillStyle = p.isEmber ? `rgba(200, 50, 50, ${opacity * 0.9})` : `rgba(130, 130, 130, ${opacity * 0.5})`;
+             ctx.fillStyle = p.isEmber ? `rgba(255, 220, 150, ${opacity})` : `rgba(150, 200, 255, ${opacity * 0.8})`;
           }
           ctx.fill();
         }
@@ -404,136 +401,416 @@
     }
     renderCanvas();
 
-    // --- UI 流程控制 ---
-    const step0 = document.getElementById('step-0');
-    const step1 = document.getElementById('step-1');
-    const step3 = document.getElementById('step-3');
-    const btnEnter = document.getElementById('btn-enter');
-    const inputMessage = document.getElementById('input-message');
-    const inputEmail = document.getElementById('input-email');
-    const btnSubmit = document.getElementById('btn-submit');
-    const btnText = document.getElementById('btn-text');
+    const dustCanvas = document.getElementById('dust-canvas');
+    const dustCtx = dustCanvas.getContext('2d', { willReadFrequently: true });
     
-    const airplaneWrapper = document.getElementById('airplane-wrapper');
-    const airplane = document.getElementById('airplane');
-    const throwHint = document.getElementById('throw-hint');
-    const centerLight = document.getElementById('center-light');
-    const panoramaBg = document.getElementById('panorama-bg');
-    const whiteOut = document.getElementById('white-out');
+    function initDustCanvas() {
+      dustCanvas.width = width; dustCanvas.height = height;
+      dustCtx.fillStyle = '#111113'; // 厚重的灰燼黑
+      dustCtx.fillRect(0, 0, width, height);
+      // 加上碳灰雜訊
+      for(let i=0; i<8000; i++) {
+        dustCtx.fillStyle = `rgba(0,0,0,${Math.random()*0.8})`;
+        dustCtx.fillRect(Math.random()*width, Math.random()*height, Math.random()*4, Math.random()*4);
+      }
+    }
+    
+    let scratchCount = 0;
+    const handleScratchMove = (e) => {
+      if (currentPhase !== 2) return;
+      e.preventDefault(); // 防止滾動
+      let cx = e.touches ? e.touches[0].clientX : e.clientX;
+      let cy = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      // 使用柔和漸層筆刷來擦拭，營造撥開迷霧的感覺 (稍微調大筆刷增加手機易用性)
+      dustCtx.globalCompositeOperation = 'destination-out';
+      const rad = 85; 
+      const grad = dustCtx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(0.6, 'rgba(0,0,0,0.6)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      
+      dustCtx.fillStyle = grad;
+      dustCtx.beginPath();
+      dustCtx.arc(cx, cy, rad, 0, Math.PI * 2);
+      dustCtx.fill();
 
-    function switchStep(hideElem, showElem) {
-      hideElem.classList.remove('step-active');
-      hideElem.classList.add('step-hidden');
+      if (isAudioReady && Math.random() < 0.25) scratchNoise.volume.rampTo(-6, 0.1);
+      if (navigator.vibrate && Math.random() < 0.15) navigator.vibrate(15); 
+
+      scratchCount++;
+      if (scratchCount % 15 === 0 && dustCanvas.width > 0 && dustCanvas.height > 0) {
+        try {
+          const imgData = dustCtx.getImageData(0, 0, dustCanvas.width, dustCanvas.height).data;
+          let cleared = 0;
+          for (let i = 3; i < imgData.length; i += 64) { if (imgData[i] === 0) cleared++; }
+          
+          if (cleared / (imgData.length / 64) > 0.25) { completeScratchPhase(); }
+        } catch (e) { console.warn("Canvas Read Error", e); }
+      }
+    };
+    
+    const handleScratchEnd = () => { if(isAudioReady) scratchNoise.volume.rampTo(-Infinity, 0.3); }
+    dustCanvas.addEventListener('touchmove', handleScratchMove, {passive: false});
+    dustCanvas.addEventListener('mousemove', handleScratchMove);
+    dustCanvas.addEventListener('touchend', handleScratchEnd);
+    dustCanvas.addEventListener('mouseup', handleScratchEnd);
+
+    // 完成擦拭
+    function completeScratchPhase() {
+      currentPhase = 2.5; 
+      document.getElementById('hint-scratch').style.display = 'none';
+      dustCanvas.style.transition = 'opacity 2s ease';
+      dustCanvas.style.opacity = '0'; 
+      dustCanvas.style.pointerEvents = 'none'; // 【關鍵修復】關閉事件攔截，讓下層的火光可以被點擊！
+      
+      if(isAudioReady) scratchNoise.volume.rampTo(-Infinity, 0.5);
+      
+      switchUI('text-2', 'text-3', 0);
+      
       setTimeout(() => {
-        showElem.classList.remove('step-hidden');
-        showElem.classList.add('step-active');
-      }, 1500); 
+        document.getElementById('center-light').classList.add('light-revealed');
+        document.getElementById('center-receptacle').style.opacity = '1'; // 顯示中央接收環
+        
+        const spark = document.getElementById('wandering-spark');
+        // 隨機出現在畫面下方
+        spark.style.left = `${20 + Math.random()*60}%`;
+        spark.style.top = `${70 + Math.random()*15}%`;
+        spark.style.opacity = '1';
+        spark.style.pointerEvents = 'auto';
+        spark.classList.add('spark-floating');
+        spark.classList.add('spark-breathing'); // 增加情緒化的呼吸燈效果
+        
+        document.getElementById('hint-drag').style.display = 'block';
+        currentPhase = 3; // 開放拖曳
+      }, 3000);
     }
 
-    // ★ 進入時觸發防空洞低頻音效
-    btnEnter.addEventListener('click', () => { 
-      initAudio();
-      playBunkerDrone(); 
-      switchStep(step0, step1); 
-    });
-
-    // ★ 點擊摺疊按鈕時觸發紙張沙沙聲音效
-    btnSubmit.addEventListener('click', async () => {
-      const msgVal = inputMessage.value.trim();
-      const emailVal = inputEmail.value.trim();
+    // 拖曳微光邏輯
+    let isDraggingSpark = false;
+    const sparkEl = document.getElementById('wandering-spark');
+    
+    const handleSparkDown = (e) => {
+      if (currentPhase !== 3) return;
+      isDraggingSpark = true;
+      sparkEl.classList.remove('spark-floating');
+      sparkEl.classList.remove('spark-breathing');
+      sparkEl.style.transition = 'none'; // 移除過渡以跟隨手指
+      sparkEl.style.transform = 'translate(-50%, -50%) scale(1.6)'; // 觸碰時光芒放大
+      sparkEl.style.boxShadow = '0 0 50px 25px rgba(255, 200, 100, 0.9), inset 0 0 15px rgba(255,255,255,1)';
       
-      if (!msgVal || !emailVal) {
-        const origText = "將信件摺疊起來";
-        btnText.textContent = "請填寫思念與收件信箱";
-        setTimeout(() => btnText.textContent = origText, 3000);
-        return;
+      if(isAudioReady) { sparkSynth.volume.rampTo(-15, 0.2); sparkSynth.frequency.value = 600; }
+      if(navigator.vibrate) navigator.vibrate([20, 20]);
+    };
+    
+    const handleSparkMove = (e) => {
+      if (!isDraggingSpark) return;
+      e.preventDefault();
+      let cx = e.touches ? e.touches[0].clientX : e.clientX;
+      let cy = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      // 計算與中心的距離
+      const centerX = width / 2 + gyroOffsetX; // 加上陀螺儀偏移讓體驗一致
+      const centerY = height / 2 + gyroOffsetY;
+      const dist = Math.hypot(cx - centerX, cy - centerY);
+      const maxDist = Math.hypot(width/2, height/2);
+      
+      // 【沈浸感升級】音效與觸覺的動態回饋 (越靠近中心反應越強烈)
+      if(isAudioReady) {
+        sparkSynth.frequency.value = 600 + (500 * (1 - dist/maxDist));
+        sparkSynth.volume.rampTo(-15 + (12 * (1 - Math.max(0.1, dist/maxDist))), 0.1); 
+      }
+      if (navigator.vibrate && Math.random() < (1 - dist/maxDist) * 0.15) {
+        navigator.vibrate(10); // 微弱的心跳指尖震動
       }
 
-      // 播放摺紙音效
-      playFoldSound();
-
-      btnSubmit.disabled = true;
-      btnText.textContent = "摺疊中...";
+      // 【沈浸感升級】磁吸效果與目標視覺變化
+      let renderX = cx;
+      let renderY = cy;
+      const snapDistance = 120;
       
-      const uid = currentUser ? currentUser.uid : "guest-" + Math.floor(Math.random() * 100000);
-
-      try {
-        const messagesRef = collection(db, 'fringe2026_messages');
-        await addDoc(messagesRef, {
-          userId: uid,
-          message: msgVal,
-          email: emailVal,
-          createdAt: serverTimestamp(),
-          scheduledSendTime: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), 
-          status: 'pending' 
-        });
-      } catch (error) { console.warn("寫入失敗:", error); }
-
-      step1.classList.remove('step-active');
-      step1.classList.add('folding-out');
-
-      setTimeout(() => {
-        airplaneWrapper.style.opacity = '1';
-        airplaneWrapper.style.pointerEvents = 'auto'; 
-      }, 1000);
-    });
-
-    let startY = 0, isDragging = false, hasThrown = false; 
-
-    const handleStart = (e) => {
-      if (hasThrown) return;
-      isDragging = true;
-      startY = e.touches ? e.touches[0].clientY : e.clientY;
-      airplane.style.transform = "scale(1.1)"; 
-    };
-
-    const handleMove = (e) => {
-      if (!isDragging || hasThrown) return;
-      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-      if (startY - currentY > 50) {
-        isDragging = false;
-        hasThrown = true;
-        executeThrow();
+      if (dist < snapDistance) {
+          const pullFactor = 1 - (dist / snapDistance);
+          renderX = cx + (centerX - cx) * pullFactor * 0.4;
+          renderY = cy + (centerY - cy) * pullFactor * 0.4;
+          
+          document.getElementById('center-receptacle').style.transform = `translate(-50%, -50%) scale(${1 - pullFactor*0.3})`;
+          document.getElementById('center-receptacle').style.borderColor = `rgba(255, 200, 100, ${pullFactor + 0.3})`;
+          document.getElementById('center-receptacle').style.borderWidth = `${1 + pullFactor*2}px`;
+      } else {
+          document.getElementById('center-receptacle').style.transform = `translate(-50%, -50%) scale(1)`;
+          document.getElementById('center-receptacle').style.borderColor = `rgba(255, 255, 255, 0.3)`;
+          document.getElementById('center-receptacle').style.borderWidth = `1px`;
       }
-    };
 
-    const handleEnd = () => {
-      if (hasThrown) return;
-      isDragging = false;
-      airplane.style.transform = ""; 
-    };
+      sparkEl.style.left = `${renderX}px`;
+      sparkEl.style.top = `${renderY}px`;
 
-    airplaneWrapper.addEventListener('touchstart', handleStart);
-    airplaneWrapper.addEventListener('touchmove', handleMove);
-    airplaneWrapper.addEventListener('touchend', handleEnd);
-    airplaneWrapper.addEventListener('mousedown', handleStart);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleEnd);
-
-    // ★ 投擲時觸發風切聲，結尾觸發希望和弦
-    function executeThrow() {
-      playWhooshSound(); // 播放風切穿梭聲
-
-      throwHint.style.opacity = '0';
-      airplane.classList.remove('floating-plane');
-      airplaneWrapper.style.pointerEvents = 'none';
-
-      airplane.classList.add('fly-animation');
-      isFlying = true;
-      targetSpeed = 60.0; 
-      centerLight.classList.add('light-active'); 
-      panoramaBg.classList.add('panorama-flying'); 
-
-      setTimeout(() => {
-        targetSpeed = baseSpeed; 
-        step3.classList.remove('step-hidden'); 
-        step3.classList.add('step-active');
+      // 吸附到中心 (距離小於 40px 時觸發完美歸位)
+      if(dist < 40) {
+        isDraggingSpark = false;
+        sparkEl.style.pointerEvents = 'none';
+        sparkEl.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        sparkEl.style.left = `${centerX}px`; 
+        sparkEl.style.top = `${centerY}px`;
+        sparkEl.style.transform = 'translate(-50%, -50%) scale(0)'; // 瞬間吸入並消失
         
-        playHopeChime(); // 播放希望和弦，同時淡出低頻轟鳴
+        document.getElementById('center-receptacle').style.opacity = '0';
+        
+        if(navigator.vibrate) navigator.vibrate([30, 50, 40, 60, 100]); // 成功點燃的強烈震動
+        if(isAudioReady) { 
+            sparkSynth.volume.rampTo(-Infinity, 0.5); 
+            chimeSynth.triggerAttackRelease(["C5", "E5"], "4n"); 
+        }
+        
+        document.getElementById('hint-drag').style.display = 'none';
+        setTimeout(startHoldPhase, 1000);
+      }
+    };
+    
+    const handleSparkUp = () => {
+      if (isDraggingSpark) {
+        isDraggingSpark = false; 
+        sparkEl.classList.add('spark-floating');
+        sparkEl.classList.add('spark-breathing');
+        sparkEl.style.transition = 'all 0.3s ease';
+        sparkEl.style.transform = 'translate(-50%, -50%) scale(1)';
+        sparkEl.style.boxShadow = ''; // 恢復預設 css shadow
+        document.getElementById('center-receptacle').style.transform = `translate(-50%, -50%) scale(1)`;
+        if(isAudioReady) sparkSynth.volume.rampTo(-Infinity, 0.5);
+      }
+    };
+    
+    sparkEl.addEventListener('touchstart', handleSparkDown, {passive: false});
+    window.addEventListener('touchmove', handleSparkMove, {passive: false});
+    window.addEventListener('touchend', handleSparkUp);
+    sparkEl.addEventListener('mousedown', handleSparkDown);
+    window.addEventListener('mousemove', handleSparkMove);
+    window.addEventListener('mouseup', handleSparkUp);
 
-        setTimeout(() => { whiteOut.classList.add('white-out-active'); }, 15000);
-        setTimeout(() => { window.location.href = 'index.html'; }, 20000);
-      }, 4500); 
+
+    function startHoldPhase() {
+      switchUI('text-3', null, 0);
+      document.getElementById('hint-hold').style.display = 'block';
+      currentPhase = 4; // 開放長按
+    }
+
+    let isHoldingDown = false; let gatherProgress = 0;
+    const interactionRing = document.getElementById('interaction-ring');
+    const centerLight = document.getElementById('center-light');
+    const hintHold = document.getElementById('hint-hold');
+
+    const handlePointerDown = (e) => {
+      if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+      if (currentPhase === 4) {
+        isHoldingDown = true; interactionRing.style.display = 'block'; visualState = 'gathering';
+        centerLight.classList.add('light-gathering');
+        if(isAudioReady) {
+          hopePad.volume.rampTo(-10, 3); hopePad.triggerAttack(["C4", "E4", "G4"]);
+          droneFilter.frequency.rampTo(800, 3);
+        }
+      }
+    };
+    const handlePointerUp = () => {
+      if (currentPhase === 4) {
+        isHoldingDown = false;
+        if(gatherProgress < 100) {
+          visualState = 'dark'; centerLight.classList.remove('light-gathering');
+          if(isAudioReady) { hopePad.volume.rampTo(-Infinity, 2); hopePad.triggerRelease(["C4", "E4", "G4"]); droneFilter.frequency.rampTo(200, 2); }
+        }
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    setInterval(() => {
+      if (currentPhase === 4) {
+        if (isHoldingDown) {
+          gatherProgress += 0.7; hintHold.style.opacity = '0';
+          if (navigator.vibrate && Math.random() < 0.2) navigator.vibrate(15); 
+        } else if (gatherProgress > 0) {
+          gatherProgress -= 1.5; hintHold.style.opacity = '1';
+        }
+        gatherProgress = Math.max(0, Math.min(100, gatherProgress));
+        
+        if (isHoldingDown) {
+          interactionRing.style.width = `${60 + gatherProgress * 3}px`; interactionRing.style.height = `${60 + gatherProgress * 3}px`;
+          interactionRing.style.backgroundColor = `rgba(255, 230, 180, ${gatherProgress / 300})`;
+          interactionRing.style.boxShadow = `0 0 ${gatherProgress}px rgba(255, 200, 100, ${gatherProgress / 100})`;
+        } else {
+          interactionRing.style.width = '60px'; interactionRing.style.height = '60px';
+          interactionRing.style.backgroundColor = 'transparent'; interactionRing.style.boxShadow = 'none';
+        }
+
+        if (gatherProgress >= 100) {
+          currentPhase = 5; interactionRing.style.display = 'none'; visualState = 'hope';
+          document.getElementById('panorama-bg').classList.add('panorama-hope');
+          if (navigator.vibrate) navigator.vibrate([50, 100, 150]); 
+          
+          if(isAudioReady) {
+            bgDrone.volume.rampTo(-Infinity, 3);
+            hopePad.triggerRelease(["C4", "E4", "G4"]);
+            hopePad.triggerAttackRelease(["C4", "G4", "C5", "E5"], "2n");
+          }
+
+          const whiteOut = document.getElementById('white-out');
+          whiteOut.style.transition = 'opacity 1s'; whiteOut.classList.add('white-out-active');
+          
+          setTimeout(() => {
+            hintHold.style.display = 'none';
+            whiteOut.classList.remove('white-out-active'); whiteOut.style.transition = 'opacity 4s ease-in-out';
+            switchUI(null, 'text-4', 0);
+            setTimeout(() => { switchUI('text-4', null, 0); document.getElementById('form-layer').classList.add('form-active'); }, 3500);
+          }, 1000);
+        }
+      }
+    }, 30);
+
+
+    let uiTimeouts = [];
+    function switchUI(hideId, showId, delay = 0) {
+      if(hideId) { const el = document.getElementById(hideId); if(el) el.classList.remove('active'); }
+      if(showId) { const tid = setTimeout(() => { const el = document.getElementById(showId); if(el) el.classList.add('active'); }, 2000 + delay); uiTimeouts.push(tid); }
+    }
+
+    let currentPhase = 0;
+
+    document.getElementById('btn-enter').addEventListener('click', async () => {
+      await initAudio(); bgDrone.start();
+      document.getElementById('btn-enter').style.pointerEvents = 'none';
+      switchUI('step-0', 'text-1', 500);
+      currentPhase = 1;
+      
+      initDustCanvas(); // 確保畫布尺寸正確
+      
+      uiTimeouts.push(
+        setTimeout(() => switchUI('text-1', 'text-2', 0), 5500),
+        setTimeout(() => {
+          dustCanvas.style.pointerEvents = 'auto';
+          dustCanvas.style.opacity = '1'; 
+          document.getElementById('hint-scratch').style.display = 'block';
+          currentPhase = 2; // 開放刮除灰燼
+        }, 11000)
+      );
+    });
+
+    const btnSubmit = document.getElementById('btn-submit');
+    const inputMessage = document.getElementById('input-message');
+    const inputEmail = document.getElementById('input-email');
+    
+    btnSubmit.addEventListener('click', async () => {
+      if (!inputMessage.value.trim() || !inputEmail.value.trim()) {
+        document.getElementById('btn-text').textContent = "請填寫思念與信箱";
+        setTimeout(() => document.getElementById('btn-text').textContent = "將信件摺疊起來", 3000); return;
+      }
+      btnSubmit.disabled = true; document.getElementById('btn-text').textContent = "摺疊中...";
+      
+      try {
+        await addDoc(collection(db, 'fringe2026_messages'), {
+          userId: currentUser ? currentUser.uid : "guest", message: inputMessage.value.trim(), email: inputEmail.value.trim(),
+          createdAt: serverTimestamp(), scheduledSendTime: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), status: 'pending' 
+        });
+      } catch (error) { console.warn("Firebase:", error); }
+
+      document.getElementById('form-layer').classList.remove('form-active');
+      document.getElementById('form-layer').classList.add('folding-out');
+
+      setTimeout(() => {
+        currentPhase = 6; // 彈弓投擲階段
+        const wrap = document.getElementById('airplane-wrapper');
+        wrap.style.opacity = '1'; wrap.style.pointerEvents = 'auto'; 
+        document.getElementById('hint-slingshot').style.display = 'block';
+      }, 1500);
+    });
+
+    let startY = 0, isPulling = false, hasThrown = false; 
+    const airplaneWrapper = document.getElementById('airplane-wrapper');
+    const airplane = document.getElementById('airplane');
+    const slingshotLine = document.getElementById('slingshot-line');
+
+    const handleSlingshotStart = (e) => {
+      if (currentPhase !== 6 || hasThrown) return;
+      isPulling = true;
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+      airplane.classList.remove('floating-plane');
+      slingshotLine.style.opacity = '1';
+      if(isAudioReady) tensionSynth.volume.rampTo(-10, 0.2);
+    };
+
+    const handleSlingshotMove = (e) => {
+      if (!isPulling || hasThrown) return;
+      e.preventDefault(); // 阻擋原生的下拉刷新
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      let deltaY = currentY - startY;
+      
+      if (deltaY > 0) {
+        let pullDist = Math.min(150, deltaY * 0.6); 
+        airplane.style.transform = `translateY(${pullDist}px) scale(${1 - pullDist/600})`;
+        slingshotLine.style.height = `${pullDist + 50}px`;
+        
+        if(isAudioReady) tensionSynth.frequency.value = 150 + pullDist * 2.5;
+        if(pullDist > 80) airplane.classList.add('tension-shake');
+        else airplane.classList.remove('tension-shake');
+
+        if (navigator.vibrate && pullDist > 100 && Math.random() < 0.3) navigator.vibrate(20);
+      }
+    };
+
+    const handleSlingshotEnd = (e) => {
+      if (!isPulling || hasThrown) return;
+      isPulling = false;
+      slingshotLine.style.opacity = '0';
+      airplane.classList.remove('tension-shake');
+      
+      const currentY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+      let deltaY = currentY - startY;
+
+      if (deltaY > 100) {
+        hasThrown = true;
+        airplane.style.setProperty('--start-y', `${Math.min(150, deltaY * 0.6)}px`);
+        executeThrow();
+      } else {
+        airplane.style.transform = `translateY(0px) scale(1)`;
+        if(isAudioReady) tensionSynth.volume.rampTo(-Infinity, 0.3);
+        setTimeout(() => { if(!hasThrown) airplane.classList.add('floating-plane'); }, 200);
+      }
+    };
+
+    airplaneWrapper.addEventListener('touchstart', handleSlingshotStart, {passive: false});
+    window.addEventListener('touchmove', handleSlingshotMove, {passive: false}); 
+    window.addEventListener('touchend', handleSlingshotEnd);
+    airplaneWrapper.addEventListener('mousedown', handleSlingshotStart);
+    window.addEventListener('mousemove', handleSlingshotMove);
+    window.addEventListener('mouseup', handleSlingshotEnd);
+
+    // 發射與結局
+    function executeThrow() {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 200]); 
+      
+      if(isAudioReady) {
+        tensionSynth.volume.rampTo(-Infinity, 0.1);
+        whooshSynth.triggerAttackRelease("1n"); 
+        setTimeout(() => {
+           chimeSynth.triggerAttackRelease(["C5", "E5", "G5"], "1n");
+           hopePad.volume.rampTo(-5, 1); hopePad.triggerAttackRelease(["C4", "G4", "C5", "E5"], "4m");
+        }, 600);
+      }
+
+      document.getElementById('hint-slingshot').style.display = 'none';
+      airplaneWrapper.style.pointerEvents = 'none';
+      airplane.style.transform = ''; 
+      airplane.classList.add('fly-animation');
+      
+      visualState = 'flying'; centerLight.classList.add('light-active'); 
+      document.getElementById('panorama-bg').classList.add('panorama-flying'); 
+
+      setTimeout(() => {
+        visualState = 'hope'; 
+        document.getElementById('text-end').classList.add('active'); 
+        setTimeout(() => { document.getElementById('white-out').classList.add('white-out-active'); }, 12000);
+        setTimeout(() => { window.location.href = 'index.html'; }, 16000);
+      }, 4000); 
     }
   </script>
 </body>
