@@ -151,8 +151,8 @@
         </div>
 
         <nav class="flex flex-col items-end gap-6 mt-auto pointer-events-auto">
-            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base font-light">躲貓貓的規則</button>
-            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">灰燼下的翅膀</button>
+            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base font-light">入境規則</button>
+            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">傳單上的遊戲規則</button>
             <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base font-light">掩蓋的真相</button>
             <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base font-light">現實的恐懼</button>
             <button onclick="executeChapter(5)" class="act-btn text-sm md:text-base font-light">紙飛機的希望</button>
@@ -284,9 +284,9 @@
 
         // 定義每個章節的專屬提示文字（可以自行修改這裡的文字）
         const chapterHints = {
-            1: "黑暗中，躲避腳步聲的規則是什麼？",
-            2: "抬頭望向天空，灰燼之下藏著什麼？",
-            3: "大人們極力掩蓋的，究竟是什麼真相？",
+            1: "歡迎入境，請輸入系統碼！",
+            2: "牢記防空口訣，保持冷靜！",
+            3: "準時收聽太平日報，請輸入電台碼！",
             4: "防空洞搖晃的夜晚，你還記得那份恐懼嗎？",
             5: "手中緊握的紙飛機，它想飛往何方？"
         };
@@ -324,11 +324,11 @@
             const pwd = document.getElementById('chapter-password').value;
             let isCorrect = false;
 
-            if (pendingChapter === 1 && pwd === '11') isCorrect = true;
-            else if (pendingChapter === 2 && pwd === '12') isCorrect = true;
-            else if (pendingChapter === 3 && pwd === '13') isCorrect = true;
-            else if (pendingChapter === 4 && pwd === '14') isCorrect = true;
-            else if (pendingChapter === 5 && pwd === '15') isCorrect = true; 
+            if (pendingChapter === 1 && pwd === '0816') isCorrect = true;
+            else if (pendingChapter === 2 && pwd === 'calm') isCorrect = true;
+            else if (pendingChapter === 3 && pwd === 'fm917') isCorrect = true;
+            else if (pendingChapter === 4 && pwd === 'nohope') isCorrect = true;
+            else if (pendingChapter === 5 && pwd === 'hope') isCorrect = true; 
 
             if (isCorrect) {
                 let unlockedChapter = pendingChapter;
