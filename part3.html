@@ -204,7 +204,7 @@
             <h2 class="font-serif-tc text-3xl font-black text-black mb-6 tracking-[0.5em] ml-[0.5em]">系統淨化完成</h2>
             <p class="text-gray-400 tracking-widest text-sm leading-loose">
                 沒有火災。<br>
-                孩子只是做夢。<br>
+                那些都是做夢。<br>
                 一切都會變好。
             </p>
         </div>
@@ -375,15 +375,15 @@
             let child1 = appendMsg('child', '天空為什麼是紅色的？他們怎麼會說天上有火？', 'msg1');
             await wait(2500);
             appendMsg('sys', '⚠️ 啟動內容清洗 (Protocol: NORMALIZATION)');
-            await scrambleText(child1, '天空的顏色本來就是灰灰紅紅的。不要這樣說。', 1500);
+            await scrambleText(child1, '天空的顏色本來就是灰灰紅紅的。', 1500);
             await wait(3000);
 
             // [15 - 24秒] 第二波：衝突 (心跳加速)
             heartRate = 800; 
-            let child2 = appendMsg('child', '可是他們看到了！外面在燒，我們要怎麼說！', 'msg2');
+            let child2 = appendMsg('child', '他們看到了！外面在燒，我們要怎麼辦？', 'msg2');
             await wait(2500);
             appendMsg('sys', '⚠️ 啟動記憶覆寫 (Protocol: DENIAL)');
-            await scrambleText(child2, '就當作沒有發生。那就說天氣不好。這已經說過一百次了。', 2000);
+            await scrambleText(child2, '就當作沒有發生。那只是天氣不好。天氣一直不好', 2000);
             await wait(3000);
 
             // [24 - 29秒] 第三波：絕望 (瀕臨崩潰)
