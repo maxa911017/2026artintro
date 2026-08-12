@@ -146,16 +146,16 @@
         </header>
 
         <div class="absolute bottom-6 left-6 flex flex-col items-start gap-4 pointer-events-auto">
-            <button onclick="showInfo('concept')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">劇本概念</button>
-            <button onclick="showInfo('team')" class="text-xs md:text-sm text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">製作團隊</button>
+            <button onclick="showInfo('concept')" class="text-sm md:text-base text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">劇本概念</button>
+            <button onclick="showInfo('team')" class="text-sm md:text-base text-gray-500 hover:text-gray-300 tracking-[0.2em] transition-colors uppercase">製作團隊</button>
         </div>
 
         <nav class="flex flex-col items-end gap-6 mt-auto pointer-events-auto">
-            <button onclick="executeChapter(1)" class="act-btn text-sm md:text-base font-light">入境規則</button>
-            <button onclick="executeChapter(2)" class="act-btn text-sm md:text-base font-light">傳單上的遊戲規則</button>
-            <button onclick="executeChapter(3)" class="act-btn text-sm md:text-base font-light">掩蓋的真相</button>
-            <button onclick="executeChapter(4)" class="act-btn text-sm md:text-base font-light">現實的恐懼</button>
-            <button onclick="executeChapter(5)" class="act-btn text-sm md:text-base font-light">紙飛機的希望</button>
+            <button onclick="executeChapter(1)" class="act-btn text-base md:text-lg font-light">入境規則</button>
+            <button onclick="executeChapter(2)" class="act-btn text-base md:text-lg font-light">傳單上的遊戲規則</button>
+            <button onclick="executeChapter(3)" class="act-btn text-base md:text-lg font-light">掩蓋的真相</button>
+            <button onclick="executeChapter(4)" class="act-btn text-base md:text-lg font-light">現實的恐懼</button>
+            <button onclick="executeChapter(5)" class="act-btn text-base md:text-lg font-light">紙飛機的希望</button>
         </nav>
     </div>
 
@@ -358,8 +358,8 @@
                 title.innerText = '劇本概念';
                 content.innerHTML = '《煙霧中長大的孩子》探討在戰火與防空洞中成長的童年。<br><br>我們試圖以孩子的視角，將殘酷的戰爭轉化為「躲貓貓」、「惡魔的翅膀」與「天空的禮物」等隱喻。在封閉且充滿恐懼的地下室裡，那些未能送達的愛與對光明的渴望，最終化作漫天星火，照亮了廢墟與黑夜。';
             } else if (type === 'team') {
-                title.innerText = '製作團隊';
-                content.innerHTML = '<div class="text-center">製作與程式開發<br><span class="text-gray-200">煙霧專案團隊</span><br><br>視覺與美術設計<br><span class="text-gray-200">視覺設計團隊</span><br><br>音效與配樂<br><span class="text-gray-200">聲音工程團隊</span><br><br><span class="text-xs text-stone-500 mt-4 block">特別感謝所有為此專案提供協助的朋友。</span></div>';
+                title.innerText = '應用程式製作團隊';
+                content.innerHTML = '<div class="text-center">製作與程式開發<br><span class="text-gray-200">廖冠皓</span><br><br>視覺與美術設計<br><span class="text-gray-200">視覺設計團隊</span><br><br>音效與配樂<br><span class="text-gray-200">技術工程製作</span><br><br><span class="text-xs text-stone-500 mt-4 block">特別感謝所有為此專案提供協助的朋友。</span></div>';
             }
 
             modal.classList.remove('opacity-0', 'pointer-events-none');
