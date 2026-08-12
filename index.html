@@ -120,6 +120,36 @@
             position: fixed; inset: 0; background-color: #000; z-index: 50;
             opacity: 0; pointer-events: none; transition: opacity 2s ease;
         }
+
+        /* 演職人員名單專用排版 */
+        .credit-group {
+            display: flex;
+            width: 100%;
+            margin-bottom: 0.6rem;
+            align-items: flex-start;
+        }
+        .credit-role {
+            width: 45%;
+            text-align: right;
+            padding-right: 1.25rem;
+            color: #737373;
+            flex-shrink: 0;
+            font-size: 0.95rem;
+        }
+        .credit-name {
+            width: 55%;
+            text-align: left;
+            color: #e5e5e5;
+            font-size: 0.95rem;
+        }
+        /* 客製化滾動條，適用於名單過長時 */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        
+        @media (max-width: 768px) {
+            .credit-role, .credit-name { font-size: 0.85rem; padding-right: 0.75rem; }
+        }
     </style>
 </head>
 <body class="font-serif antialiased bg-black">
@@ -128,8 +158,9 @@
 
     <div id="bg-container">
         <div id="bg-pan-layer">
-            <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
-            <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous">
+            <!-- 加入預設佔位圖防呆，避免圖片讀取失敗 -->
+            <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous" onerror="this.src='https://placehold.co/1920x1080/1a1a1a/333333?text=Shelter+Background'">
+            <img class="bg-image" src="back.jpg" alt="防空洞場景" crossorigin="anonymous" onerror="this.src='https://placehold.co/1920x1080/1a1a1a/333333?text=Shelter+Background'">
         </div>
     </div>
 
@@ -161,7 +192,6 @@
 
     <div id="password-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
         <div class="text-center bg-black/60 p-8 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-            <!-- 加入 ID 讓 JavaScript 可以動態修改這段文字 -->
             <h3 id="password-hint" class="text-gray-300 tracking-[0.3em] font-light mb-6 text-sm md:text-base">此記憶已封印，請輸入解鎖密碼</h3>
             <input type="password" id="chapter-password" 
                    class="bg-transparent border-b border-gray-600 text-white text-center text-xl tracking-[0.5em] outline-none px-4 py-2 mb-2 w-48 focus:border-red-800 transition-colors"
@@ -175,7 +205,8 @@
     </div>
 
     <div id="info-modal" class="fixed inset-0 bg-black/85 z-[1000] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-500 backdrop-blur-sm">
-        <div class="bg-black/80 p-8 md:p-12 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-2xl w-[85%] relative text-center">
+        <!-- 加入 max-h-[80vh] 和 custom-scrollbar 確保名單過長時可滑動閱讀 -->
+        <div class="bg-black/80 p-8 md:p-12 border border-stone-800 rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-2xl w-[85%] relative text-center max-h-[80vh] overflow-y-auto custom-scrollbar">
             <button onclick="closeInfo()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors text-xl">✕</button>
             <h3 id="info-title" class="text-gray-200 tracking-[0.4em] font-light mb-8 text-lg md:text-xl border-b border-stone-800 pb-4 inline-block">標題</h3>
             <p id="info-content" class="text-gray-400 tracking-[0.2em] font-light leading-relaxed text-sm md:text-base text-left min-h-[150px]"></p>
@@ -262,9 +293,6 @@
 
         const ui = document.getElementById('ui-layer');
 
-        // 已移除點擊空白處時 UI 會變暗消失的程式碼
-        // 讓使用者隨意點擊都不會干擾文字顯示
-
         function startFearFlicker() {
             const flicker = document.getElementById('flicker-layer');
             const sceneContainer = document.getElementById('bg-container');
@@ -281,8 +309,6 @@
         }
 
         let pendingChapter = null;
-
-        // 定義每個章節的專屬提示文字（可以自行修改這裡的文字）
         const chapterHints = {
             1: "歡迎入境，請輸入系統碼！",
             2: "牢記防空口訣，保持冷靜！",
@@ -299,7 +325,6 @@
             pendingChapter = num;
             const modal = document.getElementById('password-modal');
             
-            // 動態更新上方的提示說明
             const hintElement = document.getElementById('password-hint');
             hintElement.innerText = chapterHints[num] || "此記憶已封印，請輸入解鎖密碼";
 
@@ -308,7 +333,6 @@
             document.getElementById('pwd-error').classList.add('opacity-0');
             setTimeout(() => document.getElementById('chapter-password').focus(), 100);
             
-            // 打開視窗時讓背景選單變暗以突顯視窗
             ui.style.opacity = '0.08';
         }
 
@@ -316,7 +340,6 @@
             const modal = document.getElementById('password-modal');
             modal.classList.add('opacity-0', 'pointer-events-none');
             pendingChapter = null;
-            // 關閉視窗時恢復背景選單亮度
             ui.style.opacity = '1'; 
         }
 
@@ -358,19 +381,56 @@
                 title.innerText = '劇本概念';
                 content.innerHTML = '《煙霧中長大的孩子》探討在戰火與防空洞中成長的童年。<br><br>我們試圖以孩子的視角，將殘酷的戰爭轉化為「躲貓貓」、「惡魔的翅膀」與「天空的禮物」等隱喻。在封閉且充滿恐懼的地下室裡，那些未能送達的愛與對光明的渴望，最終化作漫天星火，照亮了廢墟與黑夜。';
             } else if (type === 'team') {
-                title.innerText = '應用程式製作團隊';
-                content.innerHTML = '<div class="text-center">製作與程式開發<br><span class="text-gray-200">廖冠皓</span><br><br>視覺與美術設計<br><span class="text-gray-200">視覺設計團隊</span><br><br>音效與配樂<br><span class="text-gray-200">技術工程製作</span><br><br><span class="text-xs text-stone-500 mt-4 block">特別感謝所有為此專案提供協助的朋友。</span></div>';
+                title.innerText = '演職人員名單';
+                content.innerHTML = `
+                    <div class="credit-group"><div class="credit-role">編⠀⠀⠀劇</div><div class="credit-name">林珈儀</div></div>
+                    <div class="credit-group"><div class="credit-role">導⠀⠀⠀演</div><div class="credit-name">林珈儀</div></div>
+                    <div class="credit-group"><div class="credit-role">協力編劇</div><div class="credit-name">李柏翰</div></div>
+                    <div class="credit-group"><div class="credit-role">執行製作</div><div class="credit-name">呂穎薰</div></div>
+                    <div class="credit-group"><div class="credit-role">舞台監督</div><div class="credit-name">陳雅均</div></div>
+                    <div class="credit-group"><div class="credit-role">行政經理</div><div class="credit-name">林心惟</div></div>
+                    
+                    <div class="credit-group" style="margin-top: 2rem;"><div class="credit-role">網頁程式設計</div><div class="credit-name">廖冠皓</div></div>
+                    <div class="credit-group"><div class="credit-role">科技互動設計</div><div class="credit-name">廖冠皓</div></div>
+                    <div class="credit-group"><div class="credit-role">實體互動設計</div><div class="credit-name">林珈儀、李柏翰</div></div>
+                    <div class="credit-group"><div class="credit-role">燈光設計</div><div class="credit-name">林孝丞</div></div>
+                    <div class="credit-group"><div class="credit-role">燈光執行</div><div class="credit-name">林書丞</div></div>
+                    <div class="credit-group"><div class="credit-role">音效執行</div><div class="credit-name">陳雅均</div></div>
+                    <div class="credit-group"><div class="credit-role">妝造設計</div><div class="credit-name">葉相吟</div></div>
+                    <div class="credit-group"><div class="credit-role">文宣設計</div><div class="credit-name">Anjan</div></div>
+                    <div class="credit-group"><div class="credit-role">行銷宣傳</div><div class="credit-name">林心惟</div></div>
+                    
+                    <div class="credit-group" style="margin-top: 2.5rem;">
+                        <div class="credit-role">演⠀⠀⠀員</div>
+                        <div class="credit-name" style="line-height: 1.8;">
+                            王韋鈞、吳佩錡、呂穎薰<br>徐瑞宏、曾語潔、蕭靜瑩<br>
+                            <span style="font-size: 0.85rem; color: #666; font-weight: 300; display: block; margin-top: 8px;">（依姓氏筆劃排序）</span>
+                        </div>
+                    </div>
+
+                    <div class="credit-group" style="margin-top: 2rem;">
+                        <div class="credit-role">互動引導演員</div>
+                        <div class="credit-name" style="line-height: 1.8;">
+                            李秉哲、葉相吟、楊傑
+                        </div>
+                    </div>
+
+                    <div class="credit-group" style="margin-top: 2rem; margin-bottom: 1rem;">
+                        <div class="credit-role">特別感謝名單</div>
+                        <div class="credit-name" style="line-height: 1.8;">
+                            台北市政府、台北表演藝術中心<br>台北藝穗節<br>林彥良先生協助道具製作
+                        </div>
+                    </div>
+                `;
             }
 
             modal.classList.remove('opacity-0', 'pointer-events-none');
-            // 打開資訊時稍微暗化背景 UI
             ui.style.opacity = '0.08';
         }
 
         function closeInfo() {
             const modal = document.getElementById('info-modal');
             modal.classList.add('opacity-0', 'pointer-events-none');
-            // 恢復 UI 亮度
             ui.style.opacity = '1';
         }
 
