@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>灰燼中的迴音 x 希望的紙飛機 | 完整沈浸版</title>
+    <title>灰燼中的迴音 x 希望的紙飛機 | 加速沈浸版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -22,7 +22,7 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         }
 
-        #canvas-container { z-index: 1; opacity: 0; transition: opacity 3s ease-in-out; }
+        #canvas-container { z-index: 1; opacity: 0; transition: opacity 2s ease-in-out; }
         #vignette { 
             z-index: 2; 
             background: radial-gradient(circle, transparent 30%, rgba(0,0,0,1) 100%); 
@@ -32,18 +32,17 @@
         #fog-canvas { z-index: 8; opacity: 0; pointer-events: none; transition: opacity 1.5s ease; }
         #interaction-canvas { z-index: 9; opacity: 1; pointer-events: none; }
         
-        #blackout-layer { z-index: 998; background: #000; opacity: 0; pointer-events: none; transition: opacity 2s ease; }
+        #blackout-layer { z-index: 998; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.5s ease; }
         #flash { z-index: 999; background: #fff; opacity: 0; pointer-events: none; }
         
-        /* 結尾白光 */
         #white-out {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #ffffff; z-index: 9999; opacity: 0; pointer-events: none;
-            transition: opacity 6s ease-in-out;
+            transition: opacity 4s ease-in-out;
         }
         .white-out-active { opacity: 1 !important; }
 
-        #abyss-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 11; background: #000; opacity: 0; pointer-events: none; transition: opacity 2s ease; }
+        #abyss-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 11; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.5s ease; }
         #single-spark {
             position: absolute; width: 12px; height: 12px; border-radius: 50%;
             background: #fff; box-shadow: 0 0 40px 20px rgba(220, 220, 220, 0.8), 0 0 80px 40px rgba(120, 120, 120, 0.4);
@@ -53,11 +52,11 @@
         .spark-struggle { animation: struggle 0.04s infinite; }
         @keyframes struggle { 0% { margin-left: -3px; } 50% { margin-left: 3px; } 100% { margin-left: 0; } }
 
-        #finale-layer { z-index: 990; opacity: 0; pointer-events: none; display: flex; justify-content: center; align-items: center; background: #000; transition: opacity 2s ease;}
+        #finale-layer { z-index: 990; opacity: 0; pointer-events: none; display: flex; justify-content: center; align-items: center; background: #000; transition: opacity 1.5s ease;}
         #finale-light {
             width: 150px; height: 150px; border-radius: 50%;
             background: radial-gradient(circle, rgba(255, 200, 150, 0.9) 0%, rgba(255, 80, 30, 0.3) 40%, transparent 70%);
-            opacity: 0; transition: opacity 0.5s ease; transform-origin: center center;
+            opacity: 0; transition: opacity 0.3s ease; transform-origin: center center;
         }
         
         .glitch-effect {
@@ -78,7 +77,7 @@
 
         .text-block {
             color: #fff; text-align: center; visibility: hidden; opacity: 0;
-            transition: opacity 2.5s ease-in-out, transform 2.5s ease-out, filter 1.5s ease;
+            transition: opacity 1.5s ease-in-out, transform 1.5s ease-out, filter 1.5s ease;
             transform: translate(-50%, calc(-50% + 15px));
             position: absolute; top: 50%; left: 50%; width: 90%; max-width: 800px;
             pointer-events: none; text-shadow: 0 4px 25px rgba(0,0,0,1);
@@ -87,7 +86,7 @@
         
         .text-fade { color: rgba(170, 170, 170, 0.85); }
         .text-danger { color: #ff6666; font-weight: bold; text-shadow: 0 0 20px rgba(255,0,0,0.8); letter-spacing: 0.6em;}
-        .text-peace { color: rgba(255, 245, 230, 1); letter-spacing: 0.8em; filter: blur(0px); transition: filter 4s, opacity 4s;}
+        .text-peace { color: rgba(255, 245, 230, 1); letter-spacing: 0.8em; filter: blur(0px); transition: filter 2.5s, opacity 2.5s;}
 
         #start-btn {
             pointer-events: auto; position: relative; background: rgba(0, 0, 0, 0.4);
@@ -105,7 +104,7 @@
         .hint-text {
             position: absolute; bottom: 12%; width: 100%; text-align: center;
             color: rgba(255, 255, 255, 0.4); font-size: 0.85rem; letter-spacing: 6px;
-            display: none; z-index: 996; animation: pulse-opacity 4s infinite; pointer-events: none;
+            display: none; z-index: 996; animation: pulse-opacity 3s infinite; pointer-events: none;
         }
 
         .crack-line {
@@ -115,7 +114,6 @@
         @keyframes crack-grow { 0% { transform: scaleY(0) rotate(var(--rot)); opacity: 1; } 100% { transform: scaleY(1) rotate(var(--rot)); opacity: 0.4; } }
         @keyframes pulse-opacity { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.7; } }
 
-        /* --- 紙飛機動畫設定 --- */
         .folding-out { opacity: 0; pointer-events: none; transform: translate(-50%, -20%) scale(0.5) rotateX(45deg) !important; transition: all 1s ease-in !important; }
         
         #airplane-wrapper {
@@ -138,7 +136,7 @@
         }
         @keyframes pulseHint { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 0.8; transform: translateY(-10px); } }
 
-        .fly-animation { animation: aerodynamicFly 4s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
+        .fly-animation { animation: aerodynamicFly 3s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
         @keyframes aerodynamicFly {
             0% { transform: translateY(0) scale(1.2) rotateX(10deg) rotateZ(0deg); opacity: 1; filter: blur(0px); }
             15% { transform: translateY(-150px) translateX(-30px) scale(0.9) rotateX(30deg) rotateZ(-15deg); opacity: 1; filter: blur(0px); }
@@ -168,7 +166,6 @@
     <div id="interaction-ring"></div>
 
     <div id="ui-layer">
-        <!-- 階段 0 到 5: 灰燼中的迴音 -->
         <div id="step-0" class="text-block active flex flex-col items-center">
             <h1 class="text-4xl md:text-6xl font-light mb-6 tracking-[0.4em] ml-3" style="text-shadow: 0 0 30px rgba(255,255,255,0.3);">放手</h1>
             <p class="text-sm md:text-base text-gray-500 mb-16 tracking-widest font-light">
@@ -199,7 +196,6 @@
             <h2 class="text-xl md:text-3xl font-light leading-loose text-peace mb-8" style="text-shadow: 0 0 30px rgba(255,200,100,0.4);">即使放開手，<br>微光依然會留下。</h2>
         </div>
 
-        <!-- 階段 6: 希望的紙飛機 (填寫) -->
         <div id="step-plane-form" class="text-block pointer-events-none flex flex-col space-y-8 w-full max-w-md mx-auto" style="z-index: 1000; padding: 0 20px;">
             <div class="text-center mb-4 space-y-2">
                 <h2 class="text-base sm:text-lg font-light tracking-[0.15em] text-gray-100 drop-shadow-md">如果這就是希望的開端</h2>
@@ -217,7 +213,6 @@
             </button>
         </div>
 
-        <!-- 階段 7: 飛向未來 -->
         <div id="step-plane-end" class="text-block pointer-events-none tracking-[0.15em] sm:tracking-[0.2em] leading-loose drop-shadow-lg">
             <p class="text-gray-100 mb-6 text-base sm:text-lg whitespace-nowrap">信件已投向遠方。</p>
             <p class="text-gray-300 text-xs sm:text-sm whitespace-nowrap">那些痛苦與窒息終將遠去。</p>
@@ -267,12 +262,9 @@
 
         let currentPhase = 0; 
         
-        // --- 整合 Tone.js 音效 ---
         let bgNoise, filter, heartbeatSynth, earRingSynth;
         let ambientPad, scratchNoise, crackSynth, lossSnapSynth;
         let finalHeartbeat, bitCrusher, finalReleaseChord, heavenlyChorus;
-        
-        // 新增紙飛機專用音效節點
         let foldNoise, whooshNoise, whooshFilter, whooshEnv, hopeChime;
         let isAudioReady = false;
 
@@ -282,7 +274,6 @@
                 try {
                     const massiveReverb = new Tone.Reverb(15).toDestination(); 
 
-                    // Phase 1~5 Sounds
                     filter = new Tone.Filter(150, "lowpass").toDestination();
                     bgNoise = new Tone.Noise("brown").connect(filter); bgNoise.volume.value = -28; 
                     heartbeatSynth = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 2, envelope: { attack: 0.01, decay: 0.4, sustain: 0.01, release: 1.2 } }).toDestination(); heartbeatSynth.volume.value = -1; 
@@ -296,14 +287,11 @@
                     heavenlyChorus = new Tone.Chorus(4, 2.5, 0.5).connect(massiveReverb).start();
                     finalReleaseChord = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 3, decay: 2, sustain: 1, release: 15 } }).connect(heavenlyChorus); finalReleaseChord.volume.value = -18; 
 
-                    // Phase 6~7 Paper Plane Sounds (基於原 Web Audio API 參數轉化)
                     foldNoise = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 } }).connect(new Tone.Filter(1500, "highpass")).toDestination(); foldNoise.volume.value = -10;
-                    
                     whooshNoise = new Tone.Noise("pink").start();
                     whooshFilter = new Tone.Filter(200, "bandpass", -12); whooshFilter.Q.value = 0.8;
                     whooshEnv = new Tone.AmplitudeEnvelope({ attack: 1, decay: 3, sustain: 0, release: 0.1 }).connect(massiveReverb);
                     whooshNoise.connect(whooshFilter).connect(whooshEnv); whooshEnv.volume.value = -5;
-
                     hopeChime = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.5, decay: 1, sustain: 1, release: 6 } }).connect(massiveReverb); hopeChime.volume.value = -5;
 
                     isAudioReady = true; resolve();
@@ -318,7 +306,6 @@
             if (rateMs > 0) { heartbeatEvent = setInterval(() => { try { heartbeatSynth.triggerAttackRelease("C1", "8n"); } catch(e){} }, rateMs); }
         }
 
-        // --- Three.js 視覺系統 ---
         let scene, camera, renderer, particles, geometry, material;
         const particleCount = 25000; 
         let fireflyPhases, isFirefly; 
@@ -391,7 +378,6 @@
             mouse.lerp(targetMouse, 0.1);
             if (currentPhase < 7) { camera.position.x += ((mouse.x * 12) - camera.position.x) * 0.05; camera.position.y += ((mouse.y * 12) - camera.position.y) * 0.05; }
 
-            // 螢火蟲基礎動態
             for (let i = 0; i < particleCount; i++) {
                 if (isFirefly[i] === 1) {
                     positions[i*3] += Math.sin(time * 0.6 + fireflyPhases[i]) * 0.25; positions[i*3+1] += Math.cos(time * 0.4 + fireflyPhases[i]) * 0.2;
@@ -435,10 +421,11 @@
                 
                 const ring = document.getElementById('interaction-ring');
                 if (isHoldingDown) {
-                    ashGatherProgress += 0.35; ring.style.display = 'block'; ring.style.width = `${80 + ashGatherProgress * 1.5}px`; ring.style.height = `${80 + ashGatherProgress * 1.5}px`;
+                    // 加速灰燼收集速度 (0.35 -> 0.8)
+                    ashGatherProgress += 0.8; ring.style.display = 'block'; ring.style.width = `${80 + ashGatherProgress * 1.5}px`; ring.style.height = `${80 + ashGatherProgress * 1.5}px`;
                     ring.style.borderColor = `rgba(255, 200, 150, ${Math.min(1, ashGatherProgress / 100)})`; ring.style.boxShadow = `0 0 ${ashGatherProgress}px rgba(255, 150, 50, ${Math.min(0.8, ashGatherProgress / 200)})`;
                 } else if (ashGatherProgress > 0) {
-                    ashGatherProgress = Math.max(0, ashGatherProgress - 0.8); ring.style.width = `${80 + ashGatherProgress * 1.5}px`; ring.style.height = `${80 + ashGatherProgress * 1.5}px`;
+                    ashGatherProgress = Math.max(0, ashGatherProgress - 1.2); ring.style.width = `${80 + ashGatherProgress * 1.5}px`; ring.style.height = `${80 + ashGatherProgress * 1.5}px`;
                     ring.style.borderColor = `rgba(255, 255, 255, ${Math.max(0.15, ashGatherProgress / 100)})`; if (ashGatherProgress === 0) { ring.style.display = 'none'; ring.style.boxShadow = 'none'; }
                 }
 
@@ -448,8 +435,9 @@
             else if (currentPhase === 4) {
                 const light = document.getElementById('finale-light');
                 if (isHoldingDown && !canRelease) {
-                    finaleProgress += 0.4; if (Math.random() < 0.04 && isAudioReady && finalHeartbeat) { try { finalHeartbeat.triggerAttackRelease("C1", "16n"); } catch(e){} }
-                } else if (!isHoldingDown && !canRelease && finaleProgress > 0) { finaleProgress -= 0.6; }
+                    // 加速最終釋放的集氣 (0.4 -> 0.8)
+                    finaleProgress += 0.8; if (Math.random() < 0.04 && isAudioReady && finalHeartbeat) { try { finalHeartbeat.triggerAttackRelease("C1", "16n"); } catch(e){} }
+                } else if (!isHoldingDown && !canRelease && finaleProgress > 0) { finaleProgress -= 1.0; }
                 finaleProgress = Math.max(0, Math.min(100, finaleProgress));
 
                 if (!canRelease) { light.style.transform = `scale(${1 + finaleProgress * 0.04})`; light.style.opacity = `${0.2 + finaleProgress * 0.008}`; }
@@ -463,7 +451,6 @@
                 }
             }
             else if (currentPhase === 5 || currentPhase === 6) {
-                // 放手後與寫信階段：輕柔漂浮
                 camera.position.z += (0 - camera.position.z) * 0.01; scene.rotation.y += 0.0002; 
                 finalCameraTilt = lerp(finalCameraTilt, Math.PI / 8, 0.003); camera.rotation.x = finalCameraTilt;
                 
@@ -475,20 +462,11 @@
                 geometry.attributes.color.needsUpdate = true;
             }
             else if (currentPhase === 7) {
-                // 紙飛機投出後：全速衝刺 (Hyperdrive)
-                camera.position.z -= 15.0; // 極速前進
-                camera.rotation.x = lerp(camera.rotation.x, 0, 0.02); // 回正視角
-                
+                camera.position.z -= 15.0; camera.rotation.x = lerp(camera.rotation.x, 0, 0.02);
                 for (let i = 0; i < particleCount; i++) {
-                    // 星星變為冷白藍光芒
-                    colors[i*3] = lerp(colors[i*3], 0.8, 0.1); 
-                    colors[i*3+1] = lerp(colors[i*3+1], 0.9, 0.1); 
-                    colors[i*3+2] = lerp(colors[i*3+2], 1.0, 0.1);
-                    
+                    colors[i*3] = lerp(colors[i*3], 0.8, 0.1); colors[i*3+1] = lerp(colors[i*3+1], 0.9, 0.1); colors[i*3+2] = lerp(colors[i*3+2], 1.0, 0.1);
                     if (positions[i*3+2] > camera.position.z + 50) { 
-                        positions[i*3+2] -= 2000; // 不斷把背後的星星拉到前面
-                        positions[i*3] = (Math.random()-0.5)*1200;
-                        positions[i*3+1] = (Math.random()-0.5)*1200;
+                        positions[i*3+2] -= 2000; positions[i*3] = (Math.random()-0.5)*1200; positions[i*3+1] = (Math.random()-0.5)*1200;
                     }
                 }
                 geometry.attributes.color.needsUpdate = true;
@@ -497,7 +475,6 @@
             geometry.attributes.position.needsUpdate = true; renderer.render(scene, camera);
         }
 
-        // --- UI 管理 ---
         const fogCanvas = document.getElementById('fog-canvas'); const fogCtx = fogCanvas.getContext('2d', { willReadFrequently: true });
         function fillFog() {
             fogCtx.globalCompositeOperation = 'source-over'; fogCtx.fillStyle = '#404348'; fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
@@ -515,7 +492,8 @@
             if(scratchCount % 12 === 0) {
                 const imgData = fogCtx.getImageData(0, 0, fogCanvas.width, fogCanvas.height).data;
                 let clearCount = 0; for (let i = 3; i < imgData.length; i += 64) { if (imgData[i] === 0) clearCount++; }
-                if (clearCount / (imgData.length / 64) > 0.40) transitionToAbyss();
+                // 降低迷霧擦除門檻 (40% -> 20%)
+                if (clearCount / (imgData.length / 64) > 0.20) transitionToAbyss();
             }
         }
 
@@ -528,18 +506,17 @@
         }
         function switchUI(hideId, showId, delay = 0) {
             let fadeOutTime = 0;
-            if(hideId) { const el = document.getElementById(hideId); if(el) { el.classList.remove('active'); fadeOutTime = 2500; } }
+            if(hideId) { const el = document.getElementById(hideId); if(el) { el.classList.remove('active'); fadeOutTime = 1500; } } // 原2500
             if(showId) { const tid = setTimeout(() => { const el = document.getElementById(showId); if(el) el.classList.add('active'); }, fadeOutTime + delay); uiTimeouts.push(tid); }
         }
 
-        // --- 互動事件處理 ---
         let p4Step = 0; let isGlitching = false; let canRelease = false; let activePointers = new Map();
         
         function handlePointerDown(e) {
             if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
             activePointers.set(e.pointerId, e); let clientX = e.clientX, clientY = e.clientY;
 
-            if (currentPhase === 1) { isHoldingDown = true; document.getElementById('interaction-ring').style.display = 'block'; setHeartbeat(200); if(filter) filter.frequency.rampTo(2000, 2); } 
+            if (currentPhase === 1) { isHoldingDown = true; document.getElementById('interaction-ring').style.display = 'block'; setHeartbeat(200); if(filter) filter.frequency.rampTo(2000, 1.5); } 
             else if (currentPhase === 1.5) { createCrack(clientX, clientY); }
             else if (currentPhase === 2) { scratchLastPos = {x: clientX, y: clientY}; if(isAudioReady) scratchNoise.volume.rampTo(-10, 0.1); }
             else if (currentPhase === 2.5) {
@@ -595,12 +572,14 @@
                 crack.style.setProperty('--rot', `${Math.random() * 360}deg`); layer.appendChild(crack);
             }
             document.body.style.transform = `translate(${(Math.random()-0.5)*20}px, ${(Math.random()-0.5)*20}px)`; setTimeout(() => document.body.style.transform = 'none', 50);
-            if(crackCount >= 5) triggerShatter();
+            // 降低敲碎門檻 (5次 -> 3次)
+            if(crackCount >= 3) triggerShatter();
         }
 
         setInterval(() => {
             if(currentPhase === 1) {
-                if(isHoldingDown) holdProgress += 1.0; else if(holdProgress > 0) holdProgress -= 2; holdProgress = Math.max(0, Math.min(100, holdProgress));
+                // 加速長按蓄力速度 (1.0 -> 2.0)
+                if(isHoldingDown) holdProgress += 2.0; else if(holdProgress > 0) holdProgress -= 3.0; holdProgress = Math.max(0, Math.min(100, holdProgress));
                 const ring = document.getElementById('interaction-ring');
                 if(isHoldingDown) { ring.style.width = `${80 + holdProgress*2}px`; ring.style.height = `${80 + holdProgress*2}px`; ring.style.boxShadow = `0 0 ${holdProgress*1.5}px rgba(255,255,255,0.25)`; }
                 
@@ -610,61 +589,66 @@
             }
         }, 50);
 
-        // --- 核心劇情推進 ---
         function startExperience() {
             document.getElementById('canvas-container').style.opacity = '1'; switchUI('step-0', 'step-1-1', 1000); currentPhase = 1; 
             setTimeout(() => { if (bgNoise && isAudioReady) { bgNoise.start(); bgNoise.volume.rampTo(-3, 8); } }, 500); setHeartbeat(1800);
             uiTimeouts.push(
-                setTimeout(() => switchUI('step-1-1', 'step-1-2', 0), 7000),
-                setTimeout(() => { switchUI('step-1-2', 'step-1-3', 0); document.getElementById('hint-hold').style.display = 'block'; }, 14000)
+                // 縮短文字切換時間 (7000 -> 4000, 14000 -> 8000)
+                setTimeout(() => switchUI('step-1-1', 'step-1-2', 0), 4000),
+                setTimeout(() => { switchUI('step-1-2', 'step-1-3', 0); document.getElementById('hint-hold').style.display = 'block'; }, 8000)
             );
         }
 
         function triggerBarrier() {
             currentPhase = 1.5; isHoldingDown = false; setHeartbeat(0);
             hideAllTexts(); document.getElementById('vignette').style.opacity = '0'; switchUI(null, 'step-1-5', 0); 
-            uiTimeouts.push(setTimeout(() => { document.getElementById('hint-tap-break').style.display = 'block'; }, 2500));
+            // 縮短敲碎提示出現時間 (2500 -> 1500)
+            uiTimeouts.push(setTimeout(() => { document.getElementById('hint-tap-break').style.display = 'block'; }, 1500));
         }
 
         function triggerShatter() {
             currentPhase = 2; 
-            const flash = document.getElementById('flash'); flash.style.opacity = '1'; setTimeout(() => { flash.style.transition = 'opacity 3s ease-in'; flash.style.opacity = '0'; }, 100);
+            const flash = document.getElementById('flash'); flash.style.opacity = '1'; setTimeout(() => { flash.style.transition = 'opacity 2s ease-in'; flash.style.opacity = '0'; }, 100);
             document.getElementById('shatter-layer').style.display = 'none'; 
             hideAllTexts(); fogCanvas.width = window.innerWidth; fogCanvas.height = window.innerHeight; fillFog(); fogCanvas.style.opacity = '1'; fogCanvas.style.pointerEvents = 'auto';
-            uiTimeouts.push(setTimeout(() => { switchUI(null, 'step-2', 0); document.getElementById('hint-scratch').style.display = 'block'; }, 3000));
+            // 縮短擦拭提示時間 (3000 -> 1500)
+            uiTimeouts.push(setTimeout(() => { switchUI(null, 'step-2', 0); document.getElementById('hint-scratch').style.display = 'block'; }, 1500));
         }
 
         function transitionToAbyss() {
-            currentPhase = 2.5; fogCanvas.style.pointerEvents = 'none'; fogCanvas.style.transition = 'opacity 3s ease'; fogCanvas.style.opacity = '0';
-            hideAllTexts(); switchUI(null, 'step-2-5', 1000); document.getElementById('abyss-layer').style.opacity = '1';
-            uiTimeouts.push(setTimeout(() => { sparkEl.style.display = 'block'; sparkEl.style.top = '90%'; document.getElementById('hint-drag').style.display = 'block'; }, 4000));
+            currentPhase = 2.5; fogCanvas.style.pointerEvents = 'none'; fogCanvas.style.transition = 'opacity 2s ease'; fogCanvas.style.opacity = '0';
+            hideAllTexts(); switchUI(null, 'step-2-5', 500); document.getElementById('abyss-layer').style.opacity = '1';
+            // 縮短深淵提示時間 (4000 -> 2500)
+            uiTimeouts.push(setTimeout(() => { sparkEl.style.display = 'block'; sparkEl.style.top = '90%'; document.getElementById('hint-drag').style.display = 'block'; }, 2500));
         }
 
         function triggerLoss() {
             currentPhase = 2.9; isDraggingSpark = false; sparkEl.style.display = 'none';
             if(isAudioReady) {
                 if(bgNoise) bgNoise.stop(); if(lossSnapSynth) lossSnapSynth.triggerAttackRelease("C1", "8n"); 
-                if(earRingSynth) { earRingSynth.volume.value = -12; earRingSynth.start(); earRingSynth.volume.rampTo(-Infinity, 12); setTimeout(() => earRingSynth.stop(), 13000); }
+                if(earRingSynth) { earRingSynth.volume.value = -12; earRingSynth.start(); earRingSynth.volume.rampTo(-Infinity, 8); setTimeout(() => earRingSynth.stop(), 9000); }
             }
-            document.getElementById('blackout-layer').style.transition = 'opacity 1s ease'; document.getElementById('blackout-layer').style.opacity = '1'; 
+            document.getElementById('blackout-layer').style.transition = 'opacity 0.8s ease'; document.getElementById('blackout-layer').style.opacity = '1'; 
             hideAllTexts();
+            // 縮短失去環節 (4500 -> 3000, 8500 -> 6000)
             uiTimeouts.push(
                 setTimeout(() => switchUI(null, 'step-loss-1', 0), 1000),
-                setTimeout(() => switchUI('step-loss-1', 'step-loss-2', 0), 4500),
-                setTimeout(() => { hideAllTexts(); startAshesPhase(); }, 8500)
+                setTimeout(() => switchUI('step-loss-1', 'step-loss-2', 0), 3000),
+                setTimeout(() => { hideAllTexts(); startAshesPhase(); }, 6000)
             );
         }
 
         function startAshesPhase() {
             currentPhase = 3; ashGatherProgress = 0; 
-            document.getElementById('blackout-layer').style.transition = 'opacity 2s ease'; document.getElementById('blackout-layer').style.opacity = '0';
+            document.getElementById('blackout-layer').style.transition = 'opacity 1.5s ease'; document.getElementById('blackout-layer').style.opacity = '0';
             document.getElementById('abyss-layer').style.opacity = '0'; document.getElementById('canvas-container').style.opacity = '0.6'; 
             if (ambientPad) ambientPad.triggerAttack(["C2", "G2"], undefined, 0.15); 
-            hideAllTexts(); switchUI(null, 'step-3-1', 1000);
+            hideAllTexts(); switchUI(null, 'step-3-1', 500);
+            // 縮短灰燼環節 (5500 -> 3500, 8500 -> 5500, 22000 -> 12000)
             uiTimeouts.push(
-                setTimeout(() => switchUI('step-3-1', 'step-3-2', 0), 5500),
-                setTimeout(() => { document.getElementById('hint-touch-ash').style.display = 'block'; }, 8500),
-                setTimeout(() => { if(currentPhase === 3) { currentPhase = 3.5; document.getElementById('interaction-ring').style.display = 'none'; transitionToFinale(); } }, 22000)
+                setTimeout(() => switchUI('step-3-1', 'step-3-2', 0), 3500),
+                setTimeout(() => { document.getElementById('hint-touch-ash').style.display = 'block'; }, 5500),
+                setTimeout(() => { if(currentPhase === 3) { currentPhase = 3.5; document.getElementById('interaction-ring').style.display = 'none'; transitionToFinale(); } }, 12000)
             );
         }
 
@@ -677,7 +661,7 @@
                     document.getElementById('canvas-container').style.opacity = '0'; document.getElementById('finale-layer').style.opacity = '1';
                     blackout.style.transition = 'opacity 1.5s ease-out'; blackout.style.opacity = '0';
                     switchUI(null, 'step-4-1', 500); uiTimeouts.push(setTimeout(() => { document.getElementById('hint-hold-finale').style.display = 'block'; }, 2000));
-                }, 1200)
+                }, 1000)
             );
         }
 
@@ -688,38 +672,30 @@
                 if(ambientPad) ambientPad.triggerAttack(["C3", "G3"], undefined, 0.1); 
             }
             if (scene) scene.fog.color.setHex(0x1a0d00); 
-            document.getElementById('canvas-container').style.transition = 'opacity 2s ease'; document.getElementById('canvas-container').style.opacity = '1'; 
-            hideAllTexts(); document.getElementById('finale-layer').style.transition = 'opacity 2s ease'; document.getElementById('finale-layer').style.opacity = '0';
+            document.getElementById('canvas-container').style.transition = 'opacity 1.5s ease'; document.getElementById('canvas-container').style.opacity = '1'; 
+            hideAllTexts(); document.getElementById('finale-layer').style.transition = 'opacity 1.5s ease'; document.getElementById('finale-layer').style.opacity = '0';
             
+            // 縮短結局過渡到寫信 (3000 -> 1500, 8000 -> 4500)
             uiTimeouts.push(setTimeout(() => {
                 switchUI(null, 'step-end', 0);
-
                 setTimeout(() => {
-                    const blackout = document.getElementById('blackout-layer'); blackout.style.transition = 'opacity 2s ease'; blackout.style.opacity = '1';
-                    
-                    // 【過渡到紙飛機環節】
-                    setTimeout(() => { startPaperAirplanePhase(); }, 2000);
-                }, 8000);
-            }, 3000)); 
+                    const blackout = document.getElementById('blackout-layer'); blackout.style.transition = 'opacity 1.5s ease'; blackout.style.opacity = '1';
+                    setTimeout(() => { startPaperAirplanePhase(); }, 1500);
+                }, 4500);
+            }, 1500)); 
         }
 
-        // --- 紙飛機串接邏輯 ---
         let isPaperPlanePhase = false; let planeStartY = 0; let isDraggingPlane = false; let hasThrownPlane = false; 
 
         function startPaperAirplanePhase() {
             isPaperPlanePhase = true; currentPhase = 6; 
-            
-            // 將星空背景改回深邃的黑，準備進入紙飛機的情境
             if (scene) scene.fog.color.setHex(0x000000);
-            
             hideAllTexts();
             const blackout = document.getElementById('blackout-layer');
-            blackout.style.transition = 'opacity 3s ease'; blackout.style.opacity = '0';
-            
-            switchUI(null, 'step-plane-form', 1000);
+            blackout.style.transition = 'opacity 2s ease'; blackout.style.opacity = '0';
+            switchUI(null, 'step-plane-form', 500);
         }
 
-        // 紙飛機表單提交
         document.getElementById('btn-submit-plane').addEventListener('click', async () => {
             const msgVal = document.getElementById('input-message').value.trim();
             const emailVal = document.getElementById('input-email').value.trim();
@@ -729,29 +705,24 @@
                 const origText = "將信件摺疊起來"; btnText.textContent = "請填寫思念與收件信箱"; setTimeout(() => btnText.textContent = origText, 3000); return;
             }
 
-            // 觸發 Tone.js 摺紙音效
             if(isAudioReady && foldNoise) { foldNoise.triggerAttackRelease("32n"); }
-
             document.getElementById('btn-submit-plane').disabled = true; btnText.textContent = "摺疊中...";
             
-            // Firebase 寫入
             const uid = currentUser ? currentUser.uid : "guest-" + Math.floor(Math.random() * 100000);
             try {
                 const messagesRef = collection(db, 'fringe2026_messages');
                 await addDoc(messagesRef, { userId: uid, message: msgVal, email: emailVal, createdAt: serverTimestamp(), scheduledSendTime: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), status: 'pending' });
             } catch (error) { console.warn("寫入失敗:", error); }
 
-            // 淡出表單，顯示紙飛機
             const formEl = document.getElementById('step-plane-form');
             formEl.classList.remove('active'); formEl.classList.add('folding-out');
             
             setTimeout(() => {
                 const airplaneWrapper = document.getElementById('airplane-wrapper');
                 airplaneWrapper.style.opacity = '1'; airplaneWrapper.style.pointerEvents = 'auto'; 
-            }, 1000);
+            }, 800);
         });
 
-        // 紙飛機投擲互動
         const planeWrapper = document.getElementById('airplane-wrapper');
         const handlePlaneStart = (e) => {
             if (!isPaperPlanePhase || hasThrownPlane) return;
@@ -769,7 +740,6 @@
         planeWrapper.addEventListener('mousedown', handlePlaneStart); window.addEventListener('mousemove', handlePlaneMove); window.addEventListener('mouseup', handlePlaneEnd);
 
         function executePlaneThrow() {
-            // 觸發 Tone.js 風切聲
             if(isAudioReady && whooshFilter && whooshEnv) {
                 whooshFilter.frequency.rampTo(1500, 1); whooshFilter.frequency.rampTo(200, 2.5, "+1");
                 whooshEnv.triggerAttackRelease(4);
@@ -777,27 +747,24 @@
             
             document.getElementById('throw-hint').style.opacity = '0';
             const airplane = document.getElementById('airplane'); airplane.classList.remove('floating-plane'); planeWrapper.style.pointerEvents = 'none';
-            airplane.classList.add('fly-animation'); // CSS 飛行特效
+            airplane.classList.add('fly-animation'); 
             
-            currentPhase = 7; // 切換粒子為 Hyperdrive 狀態
+            currentPhase = 7; 
             
+            // 縮短投出後的結尾 (3000 -> 1500, 10000 -> 6000, 6000 -> 4000)
             setTimeout(() => {
                 switchUI(null, 'step-plane-end', 0);
-                
-                // 觸發 Tone.js 終局希望和弦，同時淡出背景墊音
                 if(isAudioReady && hopeChime) {
                     if (ambientPad) ambientPad.volume.rampTo(-Infinity, 4);
                     hopeChime.triggerAttackRelease(["C5", "E5", "G5"], 6, "+0", 0.15);
                 }
-
                 setTimeout(() => { 
                     document.getElementById('white-out').classList.add('white-out-active');
-                    setTimeout(() => { window.location.href = 'index.html'; }, 6000);
-                }, 10000);
-            }, 3000);
+                    setTimeout(() => { window.location.href = 'index.html'; }, 4000);
+                }, 6000);
+            }, 1500);
         }
 
-        // --- 初始化綁定 ---
         document.addEventListener('DOMContentLoaded', () => {
             const startBtn = document.getElementById('start-btn'); const bgm = document.getElementById('bgm');
             setTimeout(() => { try { initThreeJS(); } catch(e) {} }, 100);
