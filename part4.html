@@ -18,6 +18,19 @@
             touch-action: none; overscroll-behavior: none;
         }
 
+        #panorama-bg {
+            position: absolute; top: 0; left: 0; width: 200%; height: 100%;
+            background-image: url('back.jpg'); 
+            background-size: 50% 100%; background-repeat: repeat-x;
+            background-position: left center; z-index: 0; opacity: 0;
+            animation: pan360 90s linear infinite;
+            transition: filter 3s ease-in-out, opacity 4s ease-in-out;
+        }
+        .panorama-active { opacity: 0.15 !important; }
+        .panorama-hope { opacity: 0.3 !important; filter: brightness(1.5) contrast(1.2); }
+        .panorama-flying { filter: blur(6px) brightness(2); opacity: 0.5 !important; }
+        @keyframes pan360 { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
         #canvas-container, #fog-canvas, #interaction-canvas, #shatter-layer, #vignette, #flash, #blackout-layer, #finale-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         }
@@ -131,24 +144,38 @@
         }
 
         #throw-hint {
-            position: absolute; bottom: 10vh; color: rgba(255,255,255,0.6); font-size: 0.8rem;
-            letter-spacing: 0.3em; pointer-events: none; animation: pulseHint 2s infinite;
+            position: absolute; bottom: 15vh; color: rgba(255,255,255,0.8); font-size: 0.85rem;
+            letter-spacing: 0.3em; pointer-events: none; animation: pulseHint 2s infinite; z-index: 1001;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
         }
-        @keyframes pulseHint { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 0.8; transform: translateY(-10px); } }
+        @keyframes pulseHint { 0%, 100% { opacity: 0.4; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1); } }
 
-        .fly-animation { animation: aerodynamicFly 3s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
+        /* 新增：蓄力緊繃震動 */
+        .tension-shake { animation: shakeTension 0.1s infinite; filter: drop-shadow(0 0 30px rgba(255, 220, 150, 0.8)) !important; }
+        @keyframes shakeTension { 0% { margin-left: 0px; margin-top: 0px; } 25% { margin-left: -2px; margin-top: 2px; } 50% { margin-left: 2px; margin-top: -1px; } 75% { margin-left: -1px; margin-top: -2px; } 100% { margin-left: 0px; margin-top: 0px; } }
+
+        /* 更新：適應蓄力放手點的飛行軌跡，飛向更遠的深淵 */
+        .fly-animation { animation: aerodynamicFly 4s cubic-bezier(0.3, 0.0, 0.2, 1) forwards !important; }
         @keyframes aerodynamicFly {
-            0% { transform: translateY(0) scale(1.2) rotateX(10deg) rotateZ(0deg); opacity: 1; filter: blur(0px); }
-            15% { transform: translateY(-150px) translateX(-30px) scale(0.9) rotateX(30deg) rotateZ(-15deg); opacity: 1; filter: blur(0px); }
-            40% { transform: translateY(-300px) translateX(20px) scale(0.6) rotateX(10deg) rotateZ(10deg); filter: blur(1px); }
-            70% { transform: translateY(-450px) translateX(-10px) scale(0.3) rotateX(40deg) rotateZ(-5deg); opacity: 0.8; filter: blur(2px); }
-            100% { transform: translateY(-600px) translateX(0) scale(0) rotateX(10deg) rotateZ(0deg); opacity: 0; filter: blur(5px); }
+            0% { transform: translateY(var(--start-y, 0)) scale(1.2) rotateX(10deg) rotateZ(0deg); opacity: 1; filter: blur(0px); }
+            15% { transform: translateY(-150px) translateX(-20px) scale(0.9) rotateX(30deg) rotateZ(-15deg); }
+            40% { transform: translateY(-350px) translateX(15px) scale(0.6) rotateX(10deg) rotateZ(10deg); filter: blur(1px); }
+            70% { transform: translateY(-600px) translateX(-10px) scale(0.3) rotateX(40deg) rotateZ(-5deg); opacity: 0.8; filter: blur(2px); }
+            100% { transform: translateY(-1200px) translateX(0) scale(0) rotateX(10deg) rotateZ(0deg); opacity: 0; filter: blur(5px); }
+        }
+
+        /* 新增：彈弓拉力線條 */
+        #slingshot-line {
+            position: absolute; bottom: 25vh; left: 50%; transform: translateX(-50%);
+            width: 2px; height: 0px; background: linear-gradient(to top, rgba(255,200,100,0), rgba(255,255,255,0.6));
+            pointer-events: none; z-index: 999; opacity: 0; transition: opacity 0.3s;
         }
     </style>
 </head>
 <body>
     <audio id="bgm" src="bgm2.mp3" loop preload="auto"></audio>
 
+    <div id="panorama-bg"></div>
     <div id="canvas-container"></div>
     <div id="shatter-layer"></div>
     <canvas id="fog-canvas"></canvas>
@@ -164,6 +191,7 @@
     <div id="flash"></div>
     <div id="white-out"></div>
     <div id="interaction-ring"></div>
+    <div id="slingshot-line"></div>
 
     <div id="ui-layer">
         <div id="step-0" class="text-block active flex flex-col items-center">
@@ -223,12 +251,12 @@
 
     <!-- 紙飛機等待投擲專區 -->
     <div id="airplane-wrapper">
-        <div id="airplane" class="floating-plane">
+        <div id="airplane" class="floating-plane" style="transition: transform 0.1s ease-out;">
             <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
         </div>
-        <div id="throw-hint">▲ 向上滑動，將希望寄出 ▲</div>
+        <div id="throw-hint">▼ 按住紙飛機向下拉動蓄力 ▼</div>
     </div>
 
     <!-- 互動提示 -->
@@ -265,7 +293,7 @@
         let bgNoise, filter, heartbeatSynth, earRingSynth;
         let ambientPad, scratchNoise, crackSynth, lossSnapSynth;
         let finalHeartbeat, bitCrusher, finalReleaseChord, heavenlyChorus;
-        let foldNoise, whooshNoise, whooshFilter, whooshEnv, hopeChime;
+        let foldNoise, whooshNoise, whooshFilter, whooshEnv, hopeChime, tensionSynth;
         let isAudioReady = false;
 
         function initAudio() {
@@ -293,6 +321,11 @@
                     whooshEnv = new Tone.AmplitudeEnvelope({ attack: 1, decay: 3, sustain: 0, release: 0.1 }).connect(massiveReverb);
                     whooshNoise.connect(whooshFilter).connect(whooshEnv); whooshEnv.volume.value = -5;
                     hopeChime = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.5, decay: 1, sustain: 1, release: 6 } }).connect(massiveReverb); hopeChime.volume.value = -5;
+                    
+                    // 新增：彈弓蓄力音效
+                    tensionSynth = new Tone.Oscillator(150, "triangle").toDestination();
+                    tensionSynth.volume.value = -Infinity;
+                    tensionSynth.start();
 
                     isAudioReady = true; resolve();
                 } catch (error) { console.error("Audio init failed:", error); resolve(); }
@@ -307,7 +340,7 @@
         }
 
         let scene, camera, renderer, particles, geometry, material;
-        const particleCount = 25000; 
+        const particleCount = 100000; 
         let fireflyPhases, isFirefly; 
         let mouse = new THREE.Vector2(0, 0); let targetMouse = new THREE.Vector2(0, 0);
         let isHoldingDown = false; let holdProgress = 0; let crackCount = 0; 
@@ -340,9 +373,9 @@
             fireflyPhases = new Float32Array(particleCount); isFirefly = new Uint8Array(particleCount);
 
             for (let i = 0; i < particleCount; i++) {
-                positions[i*3] = (Math.random()-0.5)*1200; 
-                positions[i*3+1] = (Math.random()-0.5)*1200; 
-                positions[i*3+2] = (Math.random()-0.5)*2000; 
+                positions[i*3] = (Math.random()-0.5)*3000; 
+                positions[i*3+1] = (Math.random()-0.5)*3000; 
+                positions[i*3+2] = (Math.random()-0.5)*4000; 
                 
                 if(Math.random() < 0.25) {
                     isFirefly[i] = 1; colors[i*3] = 1.0; colors[i*3+1] = 0.5 + Math.random()*0.3; colors[i*3+2] = 0.1;
@@ -354,7 +387,7 @@
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); 
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             
-            material = new THREE.PointsMaterial({ size: 1.8, map: createParticleTexture(), vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
+            material = new THREE.PointsMaterial({ size: 1.2, map: createParticleTexture(), vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
             particles = new THREE.Points(geometry, material); scene.add(particles);
             
             window.addEventListener('resize', onWindowResize, false); animate();
@@ -394,7 +427,7 @@
             if (currentPhase === 1) {
                 let speed = isHoldingDown ? 1.0 + (4.0 * (holdProgress/100)) : 1.2; camera.position.z -= speed;
                 if (isHoldingDown && holdProgress > 20) { let shake = (holdProgress/100)*1.8; camera.position.x += (Math.random()-0.5)*shake; camera.position.y += (Math.random()-0.5)*shake; }
-                for (let i = 0; i < particleCount; i++) { if (positions[i*3+2] > camera.position.z + 50) positions[i*3+2] -= 2000; }
+                for (let i = 0; i < particleCount; i++) { if (positions[i*3+2] > camera.position.z + 50) positions[i*3+2] -= 4000; }
             } 
             else if (currentPhase === 3) {
                 camera.position.z += (0 - camera.position.z) * 0.02; scene.rotation.y += 0.0003; 
@@ -456,7 +489,7 @@
                 
                 for (let i = 0; i < particleCount; i++) {
                     positions[i*3+1] += (0.15 + Math.random()*0.08); positions[i*3] += Math.sin(time * 0.4 + i) * 0.02; 
-                    colors[i*3] = lerp(colors[i*3], 1.0, 0.01); colors[i*3+1] = lerp(colors[i*3+1], 0.55 + (i%100)/500, 0.01); colors[i*3+2] = lerp(colors[i*3+2], 0.15 + (i%100)/800, 0.01);        
+                    colors[i*3] = lerp(colors[i*3], 0.8 + (i%100)/500, 0.01); colors[i*3+1] = lerp(colors[i*3+1], 0.9 + (i%100)/500, 0.01); colors[i*3+2] = lerp(colors[i*3+2], 1.0, 0.01);        
                     if (positions[i*3+1] > 400) { positions[i*3+1] = -300 + Math.random()*50; positions[i*3] = (Math.random()-0.5)*600; positions[i*3+2] = (Math.random()-0.5)*600; }
                 }
                 geometry.attributes.color.needsUpdate = true;
@@ -466,7 +499,7 @@
                 for (let i = 0; i < particleCount; i++) {
                     colors[i*3] = lerp(colors[i*3], 0.8, 0.1); colors[i*3+1] = lerp(colors[i*3+1], 0.9, 0.1); colors[i*3+2] = lerp(colors[i*3+2], 1.0, 0.1);
                     if (positions[i*3+2] > camera.position.z + 50) { 
-                        positions[i*3+2] -= 2000; positions[i*3] = (Math.random()-0.5)*1200; positions[i*3+1] = (Math.random()-0.5)*1200;
+                        positions[i*3+2] -= 4000; positions[i*3] = (Math.random()-0.5)*3000; positions[i*3+1] = (Math.random()-0.5)*3000;
                     }
                 }
                 geometry.attributes.color.needsUpdate = true;
@@ -590,6 +623,7 @@
         }, 50);
 
         function startExperience() {
+            document.getElementById('panorama-bg').classList.add('panorama-active');
             document.getElementById('canvas-container').style.opacity = '1'; switchUI('step-0', 'step-1-1', 1000); currentPhase = 1; 
             setTimeout(() => { if (bgNoise && isAudioReady) { bgNoise.start(); bgNoise.volume.rampTo(-3, 8); } }, 500); setHeartbeat(1800);
             uiTimeouts.push(
@@ -624,6 +658,7 @@
 
         function triggerLoss() {
             currentPhase = 2.9; isDraggingSpark = false; sparkEl.style.display = 'none';
+            document.getElementById('panorama-bg').style.opacity = '0';
             if(isAudioReady) {
                 if(bgNoise) bgNoise.stop(); if(lossSnapSynth) lossSnapSynth.triggerAttackRelease("C1", "8n"); 
                 if(earRingSynth) { earRingSynth.volume.value = -12; earRingSynth.start(); earRingSynth.volume.rampTo(-Infinity, 8); setTimeout(() => earRingSynth.stop(), 9000); }
@@ -667,6 +702,11 @@
 
         function triggerTrueEnding() {
             currentPhase = 5; document.body.classList.remove('glitch-effect');
+            
+            const panorama = document.getElementById('panorama-bg');
+            panorama.style.opacity = ''; 
+            panorama.classList.add('panorama-hope');
+
             if(isAudioReady) {
                 bitCrusher.wet.value = 0; finalReleaseChord.triggerAttackRelease(["C3", "E3", "G3", "C4"], "1n"); 
                 if(ambientPad) ambientPad.triggerAttack(["C3", "G3"], undefined, 0.1); 
@@ -723,35 +763,88 @@
             }, 800);
         });
 
+        // --- 紙飛機蓄力與投擲邏輯 ---
         const planeWrapper = document.getElementById('airplane-wrapper');
+        const slingshotLine = document.getElementById('slingshot-line');
+        const airplaneEl = document.getElementById('airplane');
+        
         const handlePlaneStart = (e) => {
             if (!isPaperPlanePhase || hasThrownPlane) return;
-            isDraggingPlane = true; planeStartY = e.touches ? e.touches[0].clientY : e.clientY;
-            document.getElementById('airplane').style.transform = "scale(1.1)"; 
+            isDraggingPlane = true; 
+            planeStartY = e.touches ? e.touches[0].clientY : e.clientY;
+            airplaneEl.classList.remove('floating-plane');
+            slingshotLine.style.opacity = '1';
+            if(isAudioReady && tensionSynth) tensionSynth.volume.rampTo(-10, 0.2);
         };
+        
         const handlePlaneMove = (e) => {
             if (!isDraggingPlane || hasThrownPlane) return;
+            // 阻擋原生下拉刷新，並監聽下拽
+            if(e.cancelable) e.preventDefault(); 
             const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-            if (planeStartY - currentY > 50) { isDraggingPlane = false; hasThrownPlane = true; executePlaneThrow(); }
-        };
-        const handlePlaneEnd = () => { if (hasThrownPlane) return; isDraggingPlane = false; document.getElementById('airplane').style.transform = ""; };
+            let deltaY = currentY - planeStartY;
+            
+            if (deltaY > 0) {
+                let pullDist = Math.min(150, deltaY * 0.6); 
+                airplaneEl.style.transform = `translateY(${pullDist}px) scale(${1 - pullDist/600})`;
+                slingshotLine.style.height = `${pullDist + 50}px`;
+                
+                if(isAudioReady && tensionSynth) tensionSynth.frequency.value = 150 + pullDist * 2.5;
+                if(pullDist > 80) airplaneEl.classList.add('tension-shake');
+                else airplaneEl.classList.remove('tension-shake');
 
-        planeWrapper.addEventListener('touchstart', handlePlaneStart); planeWrapper.addEventListener('touchmove', handlePlaneMove); planeWrapper.addEventListener('touchend', handlePlaneEnd);
-        planeWrapper.addEventListener('mousedown', handlePlaneStart); window.addEventListener('mousemove', handlePlaneMove); window.addEventListener('mouseup', handlePlaneEnd);
+                if (navigator.vibrate && pullDist > 100 && Math.random() < 0.3) navigator.vibrate(20);
+            }
+        };
+        
+        const handlePlaneEnd = (e) => { 
+            if (!isDraggingPlane || hasThrownPlane) return; 
+            isDraggingPlane = false; 
+            slingshotLine.style.opacity = '0';
+            airplaneEl.classList.remove('tension-shake');
+            
+            const currentY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            let deltaY = currentY - planeStartY;
+
+            if (deltaY > 100) {
+                hasThrownPlane = true; 
+                airplaneEl.style.setProperty('--start-y', `${Math.min(150, deltaY * 0.6)}px`);
+                executePlaneThrow(); 
+            } else {
+                airplaneEl.style.transform = `translateY(0px) scale(1)`;
+                if(isAudioReady && tensionSynth) tensionSynth.volume.rampTo(-Infinity, 0.3);
+                setTimeout(() => { if(!hasThrownPlane) airplaneEl.classList.add('floating-plane'); }, 200);
+            }
+        };
+
+        planeWrapper.addEventListener('touchstart', handlePlaneStart, {passive: false}); 
+        window.addEventListener('touchmove', handlePlaneMove, {passive: false}); 
+        window.addEventListener('touchend', handlePlaneEnd);
+        planeWrapper.addEventListener('mousedown', handlePlaneStart); 
+        window.addEventListener('mousemove', handlePlaneMove); 
+        window.addEventListener('mouseup', handlePlaneEnd);
 
         function executePlaneThrow() {
+            if (navigator.vibrate) navigator.vibrate([100, 50, 200]);
+            
+            const panorama = document.getElementById('panorama-bg');
+            panorama.classList.remove('panorama-hope');
+            panorama.classList.add('panorama-flying');
+            panorama.style.animationDuration = '15s'; // 加速旋轉產生星際穿梭感
+            
             if(isAudioReady && whooshFilter && whooshEnv) {
+                if(tensionSynth) tensionSynth.volume.rampTo(-Infinity, 0.1);
                 whooshFilter.frequency.rampTo(1500, 1); whooshFilter.frequency.rampTo(200, 2.5, "+1");
                 whooshEnv.triggerAttackRelease(4);
             }
             
             document.getElementById('throw-hint').style.opacity = '0';
-            const airplane = document.getElementById('airplane'); airplane.classList.remove('floating-plane'); planeWrapper.style.pointerEvents = 'none';
-            airplane.classList.add('fly-animation'); 
+            planeWrapper.style.pointerEvents = 'none';
+            airplaneEl.style.transform = ''; 
+            airplaneEl.classList.add('fly-animation'); 
             
             currentPhase = 7; 
             
-            // 縮短投出後的結尾 (3000 -> 1500, 10000 -> 6000, 6000 -> 4000)
             setTimeout(() => {
                 switchUI(null, 'step-plane-end', 0);
                 if(isAudioReady && hopeChime) {
