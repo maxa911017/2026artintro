@@ -481,9 +481,9 @@
             showText("系統鎖定\nSYSTEM LOCKDOWN", true);
             
             addLog("[識別] 偵測到未登記實體...");
-            await sleep(1500);
+            await sleep(800);
             addLog("[建檔] 啟動特徵描繪程序");
-            await sleep(1500);
+            await sleep(800);
             
             hideText();
             clearInterval(alarmInt);
@@ -491,7 +491,7 @@
             
             showText("抹除舊有身分...\nERASING IDENTITY");
             addLog("[防冒名] 交叉比對全區資料庫...");
-            await sleep(2000);
+            await sleep(1000);
             hideText();
             
             addLog("[剝奪] 排除人類特徵，生成編號");
@@ -499,7 +499,7 @@
             let finalID = "";
             let rollSpeed = 30;
             
-            const rollEndTime = Date.now() + 6000;
+            const rollEndTime = Date.now() + 2500;
             while(Date.now() < rollEndTime) {
                 rollingCode.innerText = generateRandomID();
                 if(Math.random() > 0.5) playBlip();
@@ -517,7 +517,7 @@
             addLog(`[分配] 編號分配完成：${finalID}`);
             
             actionStatus.innerText = "SUBJECT LOGGED";
-            await sleep(2000);
+            await sleep(800);
             rollingCode.style.opacity = 0; 
 
             let hbSpeed = 1000;
@@ -525,16 +525,16 @@
 
             showText("保持靜止\nDO NOT MOVE", true);
             addLog("[評估] 檢測外傷與神經生理反應...");
-            await sleep(4000);
+            await sleep(1500);
             
             clearInterval(hbInt);
             hbInt = setInterval(() => playHeartbeat(), 400);
             hideText();
-            await sleep(500);
+            await sleep(300);
 
             showText("直視鏡頭\nLOOK STRAIGHT", true);
             addLog("[建檔] 準備寫入終身追蹤檔案。");
-            await sleep(3000);
+            await sleep(1200);
 
             clearInterval(hbInt);
             hideText();
